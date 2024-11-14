@@ -9,7 +9,7 @@ echo "Installing speaker dependencies..."
 pip3 install --upgrade pip
 
 # Install required Python packages
-pip3 install elevenlabs sounddevice soundfile python-dotenv
+pip3 install elevenlabs sounddevice soundfile python-dotenv tyro
 
 echo "Speaker setup complete!"
 
