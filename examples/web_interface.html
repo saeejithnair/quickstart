@@ -4,7 +4,7 @@
     <title>Robot Controller</title>
     <!-- Include MQTT.js from CDN -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="mqtt.min.js"></script>
     <style>
         .control-pad {
             display: grid;
@@ -47,15 +47,60 @@
     <div id="status">Disconnected</div>
     
     <div class="control-pad">
-        <button class="control-button" ontouchstart="sendVelocity(0.5, -1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(0.5, 0)" ontouchend="sendVelocity(0, 0)">^</button>
-        <button class="control-button" ontouchstart="sendVelocity(0.5, 1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(0, -1.0)" ontouchend="sendVelocity(0, 0)"><</button>
-        <button class="control-button" ontouchstart="sendVelocity(0, 0)" ontouchend="sendVelocity(0, 0)">+</button>
-        <button class="control-button" ontouchstart="sendVelocity(0, 1.0)" ontouchend="sendVelocity(0, 0)">></button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, -1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, 0)" ontouchend="sendVelocity(0, 0)">v</button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, 1.0)" ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0.5, -1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0.5, -1.0)" 
+            ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0.5, 0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0.5, 0)" 
+            ontouchend="sendVelocity(0, 0)">^</button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0.5, 1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0.5, 1.0)" 
+            ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0, -1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0, -1.0)" 
+            ontouchend="sendVelocity(0, 0)"><</button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0, 0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0, 0)" 
+            ontouchend="sendVelocity(0, 0)">+</button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(0, 1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(0, 1.0)" 
+            ontouchend="sendVelocity(0, 0)">></button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(-0.5, -1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(-0.5, -1.0)" 
+            ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(-0.5, 0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(-0.5, 0)" 
+            ontouchend="sendVelocity(0, 0)">v</button>
+        <button class="control-button" 
+            onmousedown="sendVelocity(-0.5, 1.0)" 
+            onmouseup="sendVelocity(0, 0)" 
+            onmouseleave="sendVelocity(0, 0)"
+            ontouchstart="sendVelocity(-0.5, 1.0)" 
+            ontouchend="sendVelocity(0, 0)"> </button>
     </div>
 
     <div class="speech-box">
@@ -65,7 +110,7 @@
 
     <script>
         // MQTT client setup
-        const client = mqtt.connect('ws://beige-desktop.local:9001');
+        const client = mqtt.connect('ws://yellow-desktop.local:9001');
         
         client.on('connect', function () {
             document.getElementById('status').style.color = 'green';
