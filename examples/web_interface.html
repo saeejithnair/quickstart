@@ -47,60 +47,15 @@
     <div id="status">Disconnected</div>
     
     <div class="control-pad">
-        <button class="control-button" 
-            onmousedown="sendVelocity(0.5, -1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0.5, -1.0)" 
-            ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(0.5, 0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0.5, 0)" 
-            ontouchend="sendVelocity(0, 0)">^</button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(0.5, 1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0.5, 1.0)" 
-            ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(0, -1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0, -1.0)" 
-            ontouchend="sendVelocity(0, 0)"><</button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(0, 0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0, 0)" 
-            ontouchend="sendVelocity(0, 0)">+</button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(0, 1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(0, 1.0)" 
-            ontouchend="sendVelocity(0, 0)">></button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(-0.5, -1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(-0.5, -1.0)" 
-            ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(-0.5, 0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(-0.5, 0)" 
-            ontouchend="sendVelocity(0, 0)">v</button>
-        <button class="control-button" 
-            onmousedown="sendVelocity(-0.5, 1.0)" 
-            onmouseup="sendVelocity(0, 0)" 
-            onmouseleave="sendVelocity(0, 0)"
-            ontouchstart="sendVelocity(-0.5, 1.0)" 
-            ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" data-vel="0.5,-1.0"> </button>
+        <button class="control-button" data-vel="0.5,0">^</button>
+        <button class="control-button" data-vel="0.5,1.0"> </button>
+        <button class="control-button" data-vel="0,-1.0"><</button>
+        <button class="control-button" data-vel="0,0">+</button>
+        <button class="control-button" data-vel="0,1.0">></button>
+        <button class="control-button" data-vel="-0.5,-1.0"> </button>
+        <button class="control-button" data-vel="-0.5,0">v</button>
+        <button class="control-button" data-vel="-0.5,1.0"> </button>
     </div>
 
     <div class="speech-box">
@@ -189,6 +144,20 @@
             client.publish("robot/speak", text);
             document.getElementById('speechText').value = '';
         }
+
+        // Find all control buttons and set up their event handlers
+        document.querySelectorAll('.control-button').forEach(btn => {
+            // Parse "0.5,-1.0" into [0.5, -1.0]
+            const [linear, angular] = btn.dataset.vel.split(',').map(Number);
+
+            // Add start movement events (mousedown, touchstart)
+            ['mousedown', 'touchstart'].forEach(evt => 
+                btn.addEventListener(evt, () => sendVelocity(linear, angular)));
+
+            // Add stop movement events (mouseup, mouseleave, touchend)
+            ['mouseup', 'mouseleave', 'touchend'].forEach(evt => 
+                btn.addEventListener(evt, () => sendVelocity(0, 0)));
+        });
     </script>
 </body>
 </html>
