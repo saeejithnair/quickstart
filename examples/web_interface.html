@@ -47,15 +47,15 @@
     <div id="status">Disconnected</div>
     
     <div class="control-pad">
-        <button class="control-button" data-vel="0.5,-1.0"> </button>
-        <button class="control-button" data-vel="0.5,0">^</button>
-        <button class="control-button" data-vel="0.5,1.0"> </button>
+        <button class="control-button" data-vel="0.35,-1.0"> </button>
+        <button class="control-button" data-vel="0.35,0">^</button>
+        <button class="control-button" data-vel="0.35,1.0"> </button>
         <button class="control-button" data-vel="0,-1.0"><</button>
         <button class="control-button" data-vel="0,0">+</button>
         <button class="control-button" data-vel="0,1.0">></button>
-        <button class="control-button" data-vel="-0.5,-1.0"> </button>
-        <button class="control-button" data-vel="-0.5,0">v</button>
-        <button class="control-button" data-vel="-0.5,1.0"> </button>
+        <button class="control-button" data-vel="-0.35,-1.0"> </button>
+        <button class="control-button" data-vel="-0.35,0">v</button>
+        <button class="control-button" data-vel="-0.35,1.0"> </button>
     </div>
 
     <div class="speech-box">
@@ -147,7 +147,7 @@
 
         // Find all control buttons and set up their event handlers
         document.querySelectorAll('.control-button').forEach(btn => {
-            // Parse "0.5,-1.0" into [0.5, -1.0]
+            // Parse "0.35,-1.0" into [0.35, -1.0]
             const [linear, angular] = btn.dataset.vel.split(',').map(Number);
 
             // Add start movement events (mousedown, touchstart)
