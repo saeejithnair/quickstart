@@ -81,7 +81,7 @@ echo "Configuring hardware PWM..."                               # Setup PWM
 bash "$HOME/quickstart/setup/setup_hardware_pwm.sh"
 
 echo "Installing required Python packages..."                     # Install Python dependencies
-pip install numpy sympy control matplotlib pyserial libtmux
+pip install numpy sympy control matplotlib pyserial libtmux smbus2 sshkeyboard
 
 echo -e "\n\e[94mWould you like to set up a WiFi access point? (y/n)\e[0m"
 read -r setup_ap

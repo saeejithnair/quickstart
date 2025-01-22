@@ -102,8 +102,8 @@ def calibrate_axis(odrv0, axis):
     getattr(odrv0, f'axis{axis}').encoder.config.calib_scan_distance = 150
     getattr(odrv0, f'axis{axis}').encoder.config.bandwidth = 100
     getattr(odrv0, f'axis{axis}').controller.config.pos_gain = 1
-    getattr(odrv0, f'axis{axis}').controller.config.vel_gain = 0.02 * getattr(odrv0, f'axis{axis}').motor.config.torque_constant * getattr(odrv0, f'axis{axis}').encoder.config.cpr
-    getattr(odrv0, f'axis{axis}').controller.config.vel_integrator_gain = 0.1 * getattr(odrv0, f'axis{axis}').motor.config.torque_constant * getattr(odrv0, f'axis{axis}').encoder.config.cpr
+    getattr(odrv0, f'axis{axis}').controller.config.vel_gain = 2.0
+    getattr(odrv0, f'axis{axis}').controller.config.vel_integrator_gain = 25.0
     getattr(odrv0, f'axis{axis}').controller.config.vel_limit = 10
     getattr(odrv0, f'axis{axis}').controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
     
