@@ -16,7 +16,10 @@ while true; do
     case $yn in
         [Yy]* ) 
             echo "Running ODrive calibration..."
-            python3 calibrate_odrive.py
+            if ! python3 calibrate_odrive.py; then
+                echo -e "\n\033[1;31mODrive calibration failed! Exiting...\033[0m"
+                exit 1
+            fi
             break;;
         [Nn]* ) 
             echo "Please place the robot on a stand and try again.";;
