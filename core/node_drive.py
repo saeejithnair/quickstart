@@ -126,8 +126,8 @@ def set_velocity(linear_velocity, angular_velocity):
     v_right = linear_velocity + (WHEEL_BASE / 2.0) * angular_velocity
 
     # Set the speeds using motor_controller
-    motor_controller.set_speed_mps(0, v_left, left_dir)
-    motor_controller.set_speed_mps(1, v_right, right_dir)
+    motor_controller.set_speed_mps_left(v_left)
+    motor_controller.set_speed_mps_right(v_right)
     print(f"Setting velocities - Left: {v_left} m/s, Right: {v_right} m/s")
 
 def forward():
