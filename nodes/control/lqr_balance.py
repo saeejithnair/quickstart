@@ -3,7 +3,6 @@ import logging
 import os
 import time
 import traceback
-from enum import Enum
 
 import numpy as np
 
@@ -14,20 +13,10 @@ from nodes.sensors.imu.imu_ahrs_filter import FilteredIMU
 from utils.data_logger import DataLogger
 from utils.logging_utils import Logger
 from utils.messages.robot_extended_pose_msg import ROBOT_EXTENDED_POSE_MSG
-from utils.messages.watchdog_status_msg import WATCHDOG_STATUS_MSG
-from utils.mqtt_utils import MQTTPublisher
-from utils.topic_to_message_type import TOPIC_WATCHDOG_STATUS
 
 YAW_RATE_TO_MOTOR_TORQUE = (CFG.ROBOT_WHEEL_DIST_M / CFG.ROBOT_WHEEL_RADIUS_M) * 0.1  # Assuming a rough torque constant
 MOTOR_TURNS_TO_LINEAR_POS = CFG.ROBOT_WHEEL_RADIUS_M * 2 * np.pi
 RPM_TO_METERS_PER_SECOND = CFG.ROBOT_WHEEL_RADIUS_M * 2 * np.pi / 60
-
-class CONTROL_STATE(Enum):
-    IDLE = 0
-    IDLE_WAIT = 1
-    BALANCING = 2
-    WAKING_UP = 3
-    POSITION_CONTROL = 4
 
 class BalanceController:
     def __init__(self, standalone=True, enable_motor_control=True, logger=None):
@@ -69,13 +58,9 @@ class BalanceController:
         print(f"K_drive: {self.K_drive.round(2)}")
 
         # Control parameters
-        self.zero_angle_deg = -0.5
+        self.zero_angle_deg = 1.0
         self.desired_yaw_rate_rad_s = 0
         self.desired_vel_mps = 0
-        self.last_significant_velocity_time = time.time()
-        self.state: CONTROL_STATE = CONTROL_STATE.BALANCING
-        self.t_idle_wait_start = None
-        self.t_wakeup_start = None
 
         # For plotting and logging
         self.data_logger = DataLogger()
@@ -126,10 +111,6 @@ class BalanceController:
 
         self.cycle_count = 0
         self.is_pos_control = True
-
-        self.mqtt_publisher = MQTTPublisher(broker_address="localhost", topic_to_message_map={TOPIC_WATCHDOG_STATUS: WATCHDOG_STATUS_MSG})
-
-        self.mqtt_publisher.run(keep_alive=60)
 
     def reset_and_initialize_motors(self):
         """
@@ -201,51 +182,6 @@ class BalanceController:
                 self.reset_and_initialize_motors()
                 return self.l_vel_mps, self.r_vel_mps
 
-            # Check state transitions
-            if self.state == CONTROL_STATE.BALANCING:
-                # Feed the watchdog
-                self.mqtt_publisher.publish_msg(TOPIC_WATCHDOG_STATUS, WATCHDOG_STATUS_MSG(loop_start_time))
-
-                # Check if we've been idle for too long
-                if loop_start_time - self.last_significant_velocity_time > CFG.BALANCE_IDLE_TIMEOUT_S:
-                    self.logger.info("Entering IDLE_WAIT state")
-                    self.state = CONTROL_STATE.IDLE_WAIT
-                    self.t_idle_wait_start = loop_start_time
-            elif self.state == CONTROL_STATE.IDLE_WAIT:
-                # Do not feed the watchdog
-                # Continue balancing
-                if loop_start_time - self.t_idle_wait_start > CFG.BALANCE_IDLE_BALANCE_DURATION_S:
-                    self.logger.info("Entering IDLE state")
-                    self.state = CONTROL_STATE.IDLE
-            elif self.state == CONTROL_STATE.IDLE:
-                # Do not feed the watchdog
-                # Do not balance
-                if velocity_target_mps != 0 or yaw_rate_target_rad_s != 0:
-                    self.logger.info("Entering WAKING_UP state")
-                    self.state = CONTROL_STATE.WAKING_UP
-                    self.t_wakeup_start = loop_start_time
-                    self.last_significant_velocity_time = loop_start_time
-            elif self.state == CONTROL_STATE.WAKING_UP:
-                # Feed the watchdog
-                # Do not balance
-                self.mqtt_publisher.publish_msg(TOPIC_WATCHDOG_STATUS, WATCHDOG_STATUS_MSG(loop_start_time))
-
-                velocity_target_mps = 0
-                yaw_rate_target_rad_s = 0
-
-                # Check if wake-up time is over (0.5s for watchdog, then 0.5s for balancing)
-                if loop_start_time - self.t_wakeup_start > 1:
-                    self.logger.info("Wake-up period over, entering BALANCING state")
-                    self.state = CONTROL_STATE.BALANCING
-                elif loop_start_time - self.t_wakeup_start <= 0.75:
-                    # During first 0.5s, don't balance but keep feeding watchdog
-                    try:
-                        self.motor_controller.set_torque_nm_left(0)
-                        self.motor_controller.set_torque_nm_right(0)
-                    except Exception as e:
-                        print('Motor controller error during wake-up:', e)
-                    return self.l_vel_mps, self.r_vel_mps
-
             # Motor error checks (every 20 cycles)
             if self.cycle_count % 20 == 0:
                 try:
@@ -267,8 +203,6 @@ class BalanceController:
                 pitch_deg, roll_deg, yaw_deg = self.filtered_imu.get_orientation()
                 current_pitch_rad = -pitch_deg*np.pi/180
 
-                print(f"current_pitch_rad: {current_pitch_rad}")
-
                 gyro = self.filtered_imu.imu.get_gyro()
                 current_yaw_rate_rad_s = -gyro[2]
                 current_pitch_rate_rad_s = -gyro[1]
@@ -284,7 +218,7 @@ class BalanceController:
             # Clip the desired velocity to the maximum speed
             self.desired_vel_mps = max(min(self.desired_vel_mps, CFG.MOTOR_CONTROL_MAX_SPEED_MPS), -CFG.MOTOR_CONTROL_MAX_SPEED_MPS)
             
-            if self.state == CONTROL_STATE.BALANCING and self.is_pos_control and abs(current_vel_mps) < 0.01:
+            if self.is_pos_control and abs(current_vel_mps) < 0.01:
                 self.zero_angle_deg += 0.0002*np.sign(current_pitch_rad-self.zero_angle_deg*np.pi/180)
 
             # Retrieve the list of velocities from DataLogger
@@ -357,29 +291,11 @@ class BalanceController:
             left_torque = np.clip(left_torque, -CFG.MOTOR_CONTROL_MAX_TORQUE_NM, CFG.MOTOR_CONTROL_MAX_TORQUE_NM)
             right_torque = np.clip(right_torque, -CFG.MOTOR_CONTROL_MAX_TORQUE_NM, CFG.MOTOR_CONTROL_MAX_TORQUE_NM)
 
-            # Update last significant velocity time
-            if (abs(current_vel_mps) > CFG.BALANCE_SIGNIFICANT_VELOCITY_MPS or 
-                abs(self.desired_vel_mps) > CFG.BALANCE_SIGNIFICANT_VELOCITY_MPS or
-                abs(current_yaw_rate_rad_s) > CFG.BALANCE_SIGNIFICANT_VELOCITY_MPS or 
-                abs(self.desired_yaw_rate_rad_s) > CFG.BALANCE_SIGNIFICANT_VELOCITY_MPS):
-                self.last_significant_velocity_time = loop_start_time
-            
-            # TODO: Remove this to re-enable states if legs are attached
-            self.last_significant_velocity_time = loop_start_time
-
             # Apply torques if motor control is enabled
-            if self.enable_motor_control and self.state in [CONTROL_STATE.BALANCING, CONTROL_STATE.IDLE_WAIT, CONTROL_STATE.WAKING_UP]:
+            if self.enable_motor_control:
                 try:
                     self.motor_controller.set_torque_nm_left(left_torque)
                     self.motor_controller.set_torque_nm_right(right_torque)
-                except Exception as e:
-                    print('Motor controller error:', e)
-                    self.reset_and_initialize_motors()
-                    return self.l_vel_mps, self.r_vel_mps
-            elif self.state == CONTROL_STATE.IDLE:
-                try:
-                    self.motor_controller.set_torque_nm_left(0)
-                    self.motor_controller.set_torque_nm_right(0)
                 except Exception as e:
                     print('Motor controller error:', e)
                     self.reset_and_initialize_motors()
@@ -432,7 +348,6 @@ class BalanceController:
         self.motor_controller.disable_watchdog_right()
         self.motor_controller.stop_left()
         self.motor_controller.stop_right()
-        self.mqtt_publisher.stop()
 
 def balance(standalone=True, enable_motor_control=True):
     """

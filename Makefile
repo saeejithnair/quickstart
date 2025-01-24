@@ -10,21 +10,14 @@ CONFIG ?= bot_quickstart
 CONFIG_MSGS ?= bot_quickstart_msgs
 CFG_PATH = $(shell pwd)/config/$(CONFIG).toml
 
-all: setup
+all: install build
 
 build: 
-	python3 config/parse_toml_config.py config/$(CONFIG).toml
-	python3 config/generate_mqtt_messages.py config/$(CONFIG_MSGS).toml
-
-debug: setup
+	python3 utils/parse_toml_config.py config/$(CONFIG).toml
+	python3 utils/generate_mqtt_messages.py config/$(CONFIG_MSGS).toml
 
 clean:
 	# nothing to clean
-
-setup:
-	pip3 install -e .
-	python3 config/parse_toml_config.py config/$(CONFIG).toml
-	python3 config/generate_mqtt_messages.py config/$(CONFIG_MSGS).toml
 
 install:
 	pip3 install -e .

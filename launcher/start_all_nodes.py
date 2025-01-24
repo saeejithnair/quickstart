@@ -72,13 +72,10 @@ def create_dev_environment():
         top_right_pane.send_keys('cd ~/quickstart && python3 nodes/sensors/imu/main.py')
         middle_right_pane.send_keys('cd ~/quickstart && python3 nodes/control/main.py')
         bottom_right_pane.send_keys('cd ~/quickstart && python3 nodes/localization/localization_imu_enc.py')
-        top_left_pane.send_keys('cd ~/quickstart && python3 nodes/planning/main.py')
+        # top_left_pane.send_keys()
         middle_left_pane.send_keys('cd ~/quickstart && python3 nodes/mapping/mapping_wavemap.py')
         # bottom_left_pane.send_keys('cd ~/quickstart && python3 nodes/rerun_viewer/main.py')
-        bottom_left_pane.send_keys('cd ~/quickstart && python3 nodes/autodeploy_legs/node_autodeploy_legs.py')
         bottom_bottom_pane.send_keys('cd ~/quickstart/examples && python3 -m http.server 8080')
-
-        # bottom_left_pane.send_keys('cd ~/quickstart && python3 examples/game_interface.py')
 
         print(f"Tmux session '{SESSION_NAME}' created successfully!")
 

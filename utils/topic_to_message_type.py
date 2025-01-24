@@ -1,4 +1,4 @@
-# Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml at 2025-01-05 21:49:46.405200
+# Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml at 2025-01-24 13:00:39.174165
 
 from utils.messages.gyro_data_msg import GYRO_DATA_MSG
 from utils.messages.raw_imu_data_msg import RAW_IMU_DATA_MSG
@@ -11,7 +11,6 @@ from utils.messages.robot_pose_grid_coords_msg import ROBOT_POSE_GRID_COORDS_MSG
 from utils.messages.occupancy_grid_msg import OCCUPANCY_GRID_MSG
 from utils.messages.trajectory_msg import TRAJECTORY_MSG
 from utils.messages.target_point_msg import TARGET_POINT_MSG
-from utils.messages.watchdog_status_msg import WATCHDOG_STATUS_MSG
 from utils.messages.target_velocity_msg import TARGET_VELOCITY_MSG
 
 # Topic variables
@@ -29,7 +28,6 @@ TOPIC_OCCUPANCY_GRID = '/mapping/occupancy_grid'
 TOPIC_TRAVERSABILITY_GRID = '/mapping/traversability_grid'
 TOPIC_TRAJECTORY = '/planning/trajectory'
 TOPIC_TARGET_POINT = '/planning/target_point'
-TOPIC_WATCHDOG_STATUS = '/watchdog/status'
 TOPIC_TARGET_VELOCITY = '/control/target_velocity'
 
 # Topic to message type mapping
@@ -48,6 +46,5 @@ topic_to_message_type = {
     '/mapping/traversability_grid': OCCUPANCY_GRID_MSG,
     '/planning/trajectory': TRAJECTORY_MSG,
     '/planning/target_point': TARGET_POINT_MSG,
-    '/watchdog/status': WATCHDOG_STATUS_MSG,
     '/control/target_velocity': TARGET_VELOCITY_MSG,
 }

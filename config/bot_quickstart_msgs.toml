@@ -105,10 +105,6 @@ x_grid = ["int",'1']
 y_grid = ["int",'1']
 topic_target_point = "/planning/target_point"
 
-[WATCHDOG_STATUS]
-timestamp = ["float",'1']
-topic_watchdog_status = "/watchdog/status"
-
 [TARGET_VELOCITY]
 timestamp = ["float",'1']
 linear_velocity_mps = ["float",'1']

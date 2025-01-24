@@ -192,6 +192,8 @@ def form_robot_pose_grid_coords_message(extended_pose_msg: EXTENDED_POSE_W_BIAS_
         int((extended_pose_msg.r_a_b_y + offset) / grid_cell_size_m)
     ])
 
+    grid_coords[0] = grid_width_m/grid_cell_size_m - grid_coords[0]
+
     # Initialize and populate the message
     msg = ROBOT_POSE_GRID_COORDS_MSG()
     msg.timestamp = extended_pose_msg.timestamp

@@ -37,20 +37,20 @@ class RealSenseManager:
 
         # Get the device and enable advanced mode
         dev = cfg.get_device()
-        advnc_mode = rs.rs400_advanced_mode(dev)
-        while not advnc_mode.is_enabled():
-            print("Trying to enable advanced mode...")
-            advnc_mode.toggle_advanced_mode(True)
-            # Device will disconnect and re-connect
-            print("Sleeping for 5 seconds...")
-            time.sleep(5)
-            # Re-initialize the device
-            dev = cfg.get_device()
-            advnc_mode = rs.rs400_advanced_mode(dev)
-            print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
+        # advnc_mode = rs.rs400_advanced_mode(dev)
+        # while not advnc_mode.is_enabled():
+        #     print("Trying to enable advanced mode...")
+        #     advnc_mode.toggle_advanced_mode(True)
+        #     # Device will disconnect and re-connect
+        #     print("Sleeping for 5 seconds...")
+        #     time.sleep(5)
+        #     # Re-initialize the device
+        #     dev = cfg.get_device()
+        #     advnc_mode = rs.rs400_advanced_mode(dev)
+        #     print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
 
-        # Load the JSON configuration into advanced mode
-        advnc_mode.load_json(self.json_string)
+        # # Load the JSON configuration into advanced mode
+        # advnc_mode.load_json(self.json_string)
 
         # Restart the pipeline after loading into advanced mode
         self.pipeline.stop()
