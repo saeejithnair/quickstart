@@ -22,7 +22,7 @@ import numpy as np
 import colorsys
 from pi5neo import Pi5Neo
 
-def set_alsa_volume(volume=70):
+def set_alsa_volume(volume=100):
     try:
         cards = alsaaudio.cards()
         card_num = None
@@ -219,4 +219,5 @@ def play_mp3_with_lights(mp3_path):
 
 if __name__ == "__main__":
     set_alsa_volume()
-    play_mp3_with_lights("water.mp3")
+    play_mp3_with_lights("output.mp3")
+    

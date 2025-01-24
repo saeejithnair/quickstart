@@ -41,13 +41,15 @@ class RobotController:
         self.ACCEL_RATE = 0.15
         self.DECEL_DISTANCE = 0.15  # meters
         self.TURN_SPEED = 0.2
-        self.YAW_THRESHOLD = 2.0  # degrees
+        self.YAW_THRESHOLD = 4.0  # degrees
 
         # Start motors
         self.start_motors()
 
     def start_motors(self):
         """Initialize and start the motors in velocity mode"""
+        self.motor_controller.clear_errors_left()
+        self.motor_controller.clear_errors_right()
         self.motor_controller.start_left()
         self.motor_controller.start_right()
         self.motor_controller.enable_velocity_mode_left()

@@ -4,17 +4,15 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from examples.drive_controller import RobotController
-from elevenlabs.client import ElevenLabs
 import sounddevice as sd
 import soundfile as sf
 from scipy import signal
-from io import BytesIO
-import dotenv
 import alsaaudio
 import threading
 import queue
 import numpy as np
 from pi5neo import Pi5Neo
+import time
 
 # LED and Audio Constants
 CHUNK_DURATION = 0.1
@@ -28,10 +26,9 @@ RAMP_SPEED = 1
 
 class TTSWithLED:
     def __init__(self):
-        dotenv.load_dotenv()
         self.set_alsa_volume()
         
-    def set_alsa_volume(self, volume=80):
+    def set_alsa_volume(self, volume=100):
         try:
             cards = alsaaudio.cards()
             card_num = None
@@ -50,21 +47,18 @@ class TTSWithLED:
             print(f"Error setting volume: {e}")
 
     def play_text_with_led(self, text):
-        api_key = os.getenv("ELEVENLABS_API_KEY")
-        client = ElevenLabs(api_key=api_key)
-
-        audio = client.generate(
-            text=text,
-            voice="ceicSWVDzgXoWidth8WQ", #raphael
-            model="eleven_multilingual_v2"
-        )
+        # Load the corresponding mp3 file
+        if text == "Officially announcing the Bracket Bot hackathon!!":
+            audio_file = "two.mp3"
+        else:
+            print(f"No audio file found for text: {text}")
+            return
 
         device_info = sd.query_devices(DEVICE_NAME, 'output')
         device_id = device_info['index']
         device_sample_rate = int(device_info['default_samplerate'])
 
-        audio_data = b''.join(audio)
-        data, sample_rate = sf.read(BytesIO(audio_data), dtype='float32')
+        data, sample_rate = sf.read(audio_file, dtype='float32')
 
         if sample_rate != device_sample_rate:
             number_of_samples = int(round(len(data) * float(device_sample_rate) / sample_rate))
@@ -149,12 +143,17 @@ def main():
         # Initialize the robot
         robot = RobotController()
 
-        robot.drive_distance(1.0)
-        robot.turn_degrees(90)
+        robot.drive_distance(1.25)
+        robot.turn_degrees(100)
         
         # Initialize TTS with LED and play announcement
         tts_led = TTSWithLED()
-        tts_led.play_text_with_led("Officially announcing the bracket bot hackathon")
+        tts_led.play_text_with_led("Officially announcing the Bracket Bot hackathon!!")
+
+        # time.sleep(8)
+        
+        # robot.turn_degrees(60)
+        # tts_led.play_text_with_led("you're always yapping!")
 
     except Exception as e:
         print(f"Error: {e}")

@@ -7,6 +7,9 @@ import numpy as np
 from scipy import signal
 import dotenv
 
+# Flag to save audio to mp3
+SAVE_TO_MP3 = True
+
 dotenv.load_dotenv()
 
 api_key = os.getenv("ELEVENLABS_API_KEY")
@@ -16,12 +19,19 @@ client = ElevenLabs(
 )
 
 audio = client.generate(
-    text="This is a test of the speaker",
+    text="Each team will get one of us! A Bracket Bot!! Hackers will win challenges to take us home as the prize!!!",
     # voice="Brian",
     # voice="tdr2UZjCfSq8qpr5CfgU",
-    voice="ceicSWVDzgXoWidth8WQ", #raphael
+    voice="noq0H9VP5t5ouVxbKuDt", #raphael
     model="eleven_multilingual_v2"
 )
+
+# Save to mp3 if flag is set
+if SAVE_TO_MP3:
+    with open('output.mp3', 'wb') as f:
+        for chunk in audio:
+            f.write(chunk)
+    print("Audio saved to output.mp3")
 
 # Set the desired audio device
 device_name = "UACDemoV1.0"  # Name of the USB audio device
