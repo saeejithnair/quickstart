@@ -72,8 +72,8 @@ recordings/bracket_bot/
 *.part
 !*_collision*.stl
 constants.*
-utils/messages.h
-utils/messages.py
+lib/messages.h
+lib/messages.py
 
 # Prerequisites
 *.d

@@ -13,8 +13,8 @@ CFG_PATH = $(shell pwd)/config/$(CONFIG).toml
 all: install build
 
 build: 
-	python3 utils/parse_toml_config.py config/$(CONFIG).toml
-	python3 utils/generate_mqtt_messages.py config/$(CONFIG_MSGS).toml
+	python3 lib/parse_toml_config.py config/$(CONFIG).toml
+	python3 lib/messages/generate_mqtt_messages.py config/$(CONFIG_MSGS).toml
 
 clean:
 	# nothing to clean

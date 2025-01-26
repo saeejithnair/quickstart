@@ -63,6 +63,9 @@
         <button onclick="sendSpeech()">Speak</button>
     </div>
 
+    <!-- Add a new div to display the grid -->
+    <div id="grid-container" style="margin: 20px;"></div>
+
     <script>
         // Extract username from URL or use hostname
         const hostname = window.location.hostname;  // e.g., "beige-desktop.local" or "192.168.1.100"
@@ -85,6 +88,9 @@
 
         client.on('message', function (topic, message) {
             console.log("Message received:", message.toString());
+            if (topic === '/mapping/traversability_grid') {
+                displayGrid(message);
+            }
         });
 
             // Add s    tate tracking for keys
@@ -146,6 +152,34 @@
             const text = document.getElementById('speechText').value;
             client.publish("robot/speak", text);
             document.getElementById('speechText').value = '';
+        }
+
+        function displayGrid(message) {
+            const data = JSON.parse(message.toString());
+            const flattenedGridList = data.flattened_grid_list;
+            const width = data.width;
+
+            const gridContainer = document.getElementById('grid-container');
+            gridContainer.innerHTML = ''; // Clear previous grid
+
+            const table = document.createElement('table');
+            table.style.borderCollapse = 'collapse';
+
+            for (let i = 0; i < width; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < width; j++) {
+                    const cell = document.createElement('td');
+                    const value = flattenedGridList[i * width + j];
+                    cell.style.width = '20px';
+                    cell.style.height = '20px';
+                    cell.style.border = '1px solid black';
+                    cell.style.backgroundColor = value ? 'black' : 'white'; // Example color mapping
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+
+            gridContainer.appendChild(table);
         }
     </script>
 </body>

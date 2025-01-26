@@ -2,8 +2,8 @@ import json
 import os
 import time
 
-from nodes.control.odrive_uart import ODriveUART
-from nodes.sensors.imu.imu_ahrs_filter import FilteredIMU
+from lib.control.odrive_uart import ODriveUART
+from lib.sensors.imu.imu import FilteredIMU
 
 
 def test_motor_direction():

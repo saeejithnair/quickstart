@@ -84,10 +84,10 @@ setup(
     ]),
     package_dir={
         "utils": "utils",
-        "control": "nodes/control",
-        "realsense": "nodes/sensors/realsense",
-        "rerun_viewer": "nodes/rerun_viewer",
-        "imu": "nodes/sensors/imu"
+        "control": "lib/control",
+        "realsense": "lib/sensors/realsense",
+        "rerun_viewer": "lib/rerun_viewer",
+        "imu": "lib/sensors/imu"
     },
     # package_data=package_data,
     install_requires=dependencies,

@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from nodes.sensors.imu.imu_ahrs_filter import FilteredIMU
+from lib.sensors.imu.imu import FilteredIMU
 
 
 def determine_imu_orientation():
