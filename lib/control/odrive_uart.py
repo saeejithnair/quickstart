@@ -388,7 +388,7 @@ def reset_odrive():
 
 if __name__ == '__main__':
     # Initialize with directions for left and right motors
-    motor_controller = ODriveUART('/dev/ttyAMA1', left_axis=1, right_axis=0, dir_left=1, dir_right=-1)
+    motor_controller = ODriveUART('/dev/ttyAMA1', left_axis=0, right_axis=1, dir_left=1, dir_right=-1)
 
     motor_controller.start_left()
     motor_controller.start_right()
@@ -401,14 +401,22 @@ if __name__ == '__main__':
         motor_controller.set_torque_nm_right(nm=1.0)
 
         while True:
+            motor_controller.set_torque_nm_left(nm=1.0)
+            motor_controller.set_torque_nm_right(nm=1.0)
             if motor_controller.check_errors_left():
+                print(motor_controller.get_errors_left())
                 print("\nError detected on left motor. Clearing...")
                 motor_controller.clear_errors_left()
                 time.sleep(1)
+                motor_controller.start_left()
+                motor_controller.enable_torque_mode_left()
             if motor_controller.check_errors_right():
+                print(motor_controller.get_errors_right())
                 print("\nError detected on right motor. Clearing...")
                 motor_controller.clear_errors_right()
                 time.sleep(1)
+                motor_controller.start_right()
+                motor_controller.enable_torque_mode_right()
 
     except Exception as e:
         print(e)

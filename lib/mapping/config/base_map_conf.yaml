@@ -1,5 +1,5 @@
 config_params:
-  realsense_config_loc: "quickstart/nodes/mapping/config/realsense_phys_config.yaml"
+  realsense_config_loc: "quickstart/lib/mapping/config/realsense_phys_config.yaml"
 
   update_rate: 10 # Hz
 
@@ -15,7 +15,7 @@ map_params:
   block_removal_distance: 30
   pruning_delta: 2.0
 
-  output_map_path: "quickstart/nodes/mapping/maps/"
+  output_map_path: "quickstart/lib/mapping/maps/"
 
 grid_params:
   default_planar_spread: 20

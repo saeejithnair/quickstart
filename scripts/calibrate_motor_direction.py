@@ -87,7 +87,7 @@ def test_motor_direction():
     
     # Save results to file in this script folder
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(script_dir, '../nodes/control/motor_dir.json'), 'w') as f:
+    with open(os.path.join(script_dir, '../lib/control/motor_dir.json'), 'w') as f:
         json.dump(directions, f)
     
     print("\nDirection test complete!")

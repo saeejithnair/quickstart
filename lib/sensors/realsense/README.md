@@ -31,7 +31,7 @@ make -j$(($(nproc)-1)) && sudo make -j$(($(nproc)-1)) install
 # Now to use the pyrealsense2 package, the so's need to be copied into the python site-packages or dist-packages directory of the python environment you are using.
 # The below is a full example if using a virtual env.
 # Note: Replace PYTHON_VERSION with the python version you are using
-cd ~/quickstart/nodes/sensors/realsense
+cd ~/quickstart/lib/sensors/realsense
 python3 -m venv venv
 source venv/bin/activate
 pip install numpy
@@ -43,11 +43,11 @@ cp -T ~/librealsense/build/Release/pyrealsense2.cpython-3${PYTHON_VERSION}-aarch
 cp -T ~/librealsense/build/Release/pyrealsense2.cpython-3${PYTHON_VERSION}-aarch64-linux-gnu.so.2.55 pyrealsense2.so.2.55
 cp -T ~/librealsense/build/Release/pyrsutils.cpython-3${PYTHON_VERSION}-aarch64-linux-gnu.so pyrsutils.so
 cp -T ~/librealsense/build/Release/pyrsutils.cpython-3${PYTHON_VERSION}-aarch64-linux-gnu.so.2.55 pyrsutils.so.2.55
-cd ~/quickstart/nodes/sensors/realsense  
+cd ~/quickstart/lib/sensors/realsense  
 source venv/bin/activate
 # Then you can test with the following:
 python3 -c "import pyrealsense2 as rs; print(rs.pipeline());"
-python3 ~/quickstart/nodes/sensors/realsense/realsense_manager.py
+python3 ~/quickstart/lib/sensors/realsense/realsense_manager.py
 ```
 
 The shared object will be installed in /usr/local/lib, header files in /usr/local/include.
@@ -63,7 +63,7 @@ librealsense tools are also installed in the docker environment and after follow
 # Python Example
 
 ```bash
-cd ~/quickstart/nodes/sensors/realsense
+cd ~/quickstart/lib/sensors/realsense
 python3 realsense_manager.py
 ```
 

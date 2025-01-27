@@ -148,7 +148,7 @@ class RealSenseManager:
     
 if __name__ == "__main__":
     # Start the RealSense pipeline
-    json_path = "nodes/mapping/config/default_435i.json"
+    json_path = "lib/mapping/config/default_435i.json"
     rs_manager = RealSenseManager(json_path)
 
     rs_manager.start_pipeline()

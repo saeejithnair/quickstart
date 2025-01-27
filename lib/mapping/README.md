@@ -28,4 +28,4 @@ docker build --tag=wavemap_ros1 --pull - <<< $(curl -s https://raw.githubusercon
 8. Load the map you just downloaded by clicking: Loaded map → Choose file
 
 ## Current Notes (11/15/24):
-- Currently, the extrinsics in the ``nodes/mapping/config/realsense_phys_config.yaml`` file are for the old, upright RealSense mount. Additionally, since the cables we're currently using are USB2, the resolution specification in ``nodes/mapping/config/default_435i.json`` is set to 640x480.
+- Currently, the extrinsics in the ``lib/mapping/config/realsense_phys_config.yaml`` file are for the old, upright RealSense mount. Additionally, since the cables we're currently using are USB2, the resolution specification in ``lib/mapping/config/default_435i.json`` is set to 640x480.

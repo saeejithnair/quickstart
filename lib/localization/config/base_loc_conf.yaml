@@ -1,5 +1,5 @@
 config_params:
-  imu_config_loc: "quickstart/nodes/localization/config/imu_params_conf.yaml"
+  imu_config_loc: "quickstart/lib/localization/config/imu_params_conf.yaml"
 
 physical_params:
   gravity_up: false

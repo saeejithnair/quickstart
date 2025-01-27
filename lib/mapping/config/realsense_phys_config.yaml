@@ -5,4 +5,4 @@ extrinsics:
   r_bc: [0, 0.0739853, 1.4884446199999999]
   phi_bc: [-1.46151515, 1.46151515, 1.02336392]
 
-json_file_loc: "quickstart/nodes/mapping/config/default_435i.json"
+json_file_loc: "quickstart/lib/mapping/config/default_435i.json"
