@@ -76,6 +76,8 @@ class LookaheadController:
         error_linear = LookaheadController.calculate_linear_error(current_pose, finalGoal)
         error_angular = LookaheadController.calculate_angular_error(current_pose, goal)
 
+        print(f"Linear Err: {error_linear}, Angular Err: {error_angular}")
+
         if abs(error_angular) > np.pi/2:
             linear_velocity = 0
         else:
@@ -84,7 +86,7 @@ class LookaheadController:
         angular_velocity = self.pid_angular.update(error_angular, time.time(), True)
 
         linear_velocity = np.clip(linear_velocity, -self.max_linear_velocity, self.max_linear_velocity)
-        angular_velocity = np.clip(angular_velocity, -self.max_angular_velocity, self.max_angular_velocity)
+        angular_velocity = 0 # np.clip(angular_velocity, -self.max_angular_velocity, self.max_angular_velocity)
 
         return linear_velocity, angular_velocity
 

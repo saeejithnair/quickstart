@@ -150,6 +150,8 @@ class ControlNode(object):
                             self.target_point_msg = None
                             self.path_pose_list = None
                             self.traversability_grid = None
+
+                            print("Target point has been reached, not replanning.")
                             continue
 
                 # Process traversability grid
@@ -188,6 +190,7 @@ class ControlNode(object):
                     target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
                     target_velocity_msg.linear_velocity_mps = linear_velocity
                     target_velocity_msg.angular_velocity_radps = angular_velocity
+                    print(f"Linear Velocity: {linear_velocity}, Angular Velocity: {angular_velocity}")
                 elif target_velocity_msg is not None:
                     # use the velocity received on the topic
                     pass

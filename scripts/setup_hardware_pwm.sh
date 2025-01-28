@@ -1,6 +1,6 @@
 # See: https://gist.github.com/Gadgetoid/b92ad3db06ff8c264eef2abf0e09d569
 
-dtc -I dts -O dtb -o pwm-pi5.dtbo pwm-pi5.dts
+dtc -I dts -O dtb -o pwm-pi5.dtbo $HOME/quickstart/scripts/pwm-pi5.dts
 sudo cp pwm-pi5.dtbo /boot/firmware/overlays/
 # only add the overlay if it's not already in the file
 if ! grep -q "dtoverlay=pwm-pi5" /boot/firmware/config.txt; then

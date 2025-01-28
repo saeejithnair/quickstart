@@ -23,7 +23,6 @@ sudo apt-get install -y \
     i2c-tools cmake \
     libi2c-dev \
     libdbus-1-dev libfreetype-dev libtbb-dev libglfw3-dev \
-    gcc-$gcc_version g++-$gcc_version gdb \
     libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
     libxcb-render-util0 libxcb-shape0 libxcb-util1 libxcb-xinerama0 \
     libxcb-xinput0 libxcb-xkb1 libxkbcommon-x11-0 libxcb-cursor0 \
@@ -149,7 +148,7 @@ if ! grep -q "dtoverlay=i2c1" /boot/firmware/config.txt; then
 fi
 
 echo "Configuring hardware PWM..."
-bash "$HOME/quickstart/setup/setup_hardware_pwm.sh"
+bash "$HOME/quickstart/scripts/setup_hardware_pwm.sh"
 
 echo -e "\n\e[94mWould you like to set up a WiFi access point? (y/n)\e[0m"
 read -r setup_ap

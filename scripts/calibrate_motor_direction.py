@@ -50,9 +50,9 @@ def test_motor_direction():
         
         # Spin motor at a set speed
         if name == 'left':
-            motor_controller.set_speed_rpm_left(30)
+            motor_controller.set_speed_rpm_left(60)
         else:
-            motor_controller.set_speed_rpm_right(30)
+            motor_controller.set_speed_rpm_right(60)
 
         # Allow motor to spin for a short duration
         curr_time = time.time()

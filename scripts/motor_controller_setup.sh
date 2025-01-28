@@ -16,7 +16,7 @@ while true; do
     case $yn in
         [Yy]* ) 
             echo "Running ODrive calibration..."
-            python3 calibrate_odrive.py
+            python3 $HOME/quickstart/scripts/calibrate_odrive.py
             break;;
         [Nn]* ) 
             echo "Please place the robot on a stand and try again.";;
@@ -33,7 +33,7 @@ while true; do
     case $yn in
         [Yy]* ) 
             echo "Running motor direction calibration..."
-            python3 calibrate_motor_direction.py
+            python3 $HOME/quickstart/scripts/calibrate_motor_direction.py
             break;;
         [Nn]* ) 
             echo "Please place the robot on the ground with space to move and try again.";;
