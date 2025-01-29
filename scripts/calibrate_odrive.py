@@ -222,12 +222,6 @@ except:
     fibre.serial_transport.DEFAULT_BAUDRATE = 115200
     odrv0 = connect_odrive()
 print("Found ODrive.")
-
-# User confirmation for safety
-confirmation = input("Make sure the wheels are lifted on the ground before proceeding.\n\nAre the wheels off the ground? [yes/no] ").lower()
-if confirmation.lower() != 'yes':
-    print('Rerun this script once the wheels have been lifted off the ground.')
-    exit(0)
 print()
 
 # Calibrate each axis

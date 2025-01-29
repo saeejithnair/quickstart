@@ -4,6 +4,8 @@ import odrive.enums
 import serial
 from RPi import GPIO  # Import GPIO module
 
+import lib.constants as CFG
+
 # GPIO setup for resetting ODrive
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(5, GPIO.OUT)
@@ -200,6 +202,14 @@ class ODriveUART:
         """
         rps = rpm / 60
         self.send_command(f'w axis{axis}.controller.input_vel {rps * direction:.4f}')
+
+    def set_speed_mps_left(self, mps):
+        rps = mps / (CFG.ROBOT_WHEEL_RADIUS_M * 2 * 3.14159)
+        self.send_command(f'w axis{self.left_axis}.controller.input_vel {rps * self.dir_left:.4f}')
+
+    def set_speed_mps_right(self, mps):
+        rps = mps / (CFG.ROBOT_WHEEL_RADIUS_M * 2 * 3.14159)
+        self.send_command(f'w axis{self.right_axis}.controller.input_vel {rps * self.dir_right:.4f}')
 
     def set_torque_nm_left(self, nm):
         """

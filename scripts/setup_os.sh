@@ -20,6 +20,14 @@ echo "Restarting swap service..."
 sudo /etc/init.d/dphys-swapfile stop
 sudo /etc/init.d/dphys-swapfile start
 
+echo "Setting the language to en_US.UTF-8..."
+# create /etc/environment if it doesnt exist 
+if [ ! -f /etc/environment ]; then
+    sudo touch /etc/environment
+fi
+echo "LC_ALL=en_US.UTF-8" | sudo tee -a /etc/environment
+echo "LANG=en_US.UTF-8" | sudo tee -a /etc/environment
+sudo locale-gen en_US en_US.UTF-8
 
 echo "Updating package lists..."
 sudo apt-get install -y software-properties-common && sudo apt-get update # Update package lists

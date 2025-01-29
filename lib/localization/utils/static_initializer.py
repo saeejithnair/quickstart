@@ -1,20 +1,17 @@
 import numpy as np
 import scipy.constants
 
+import lib.constants as CFG
 from lib.localization.modelling.spline_smoothing import IMUSmoother
 
 
 class StaticInitializer:
-    def __init__(self, loc_config : dict):
-        """
-        Initialize the StaticInitializer with the localization configuration.
+    """Static initializer for the localization system."""
 
-        Parameters
-        ----------
-        loc_config (dict): The localization configuration dictionary.
-        """
+    def __init__(self):
+        """Initialize the StaticInitializer with the localization configuration."""
         # retrieve static init period
-        self.static_init_period = loc_config['initialization_params']['static_init_period']
+        self.static_init_period = CFG.LOCALIZATION_INITIALIZATION_STATIC_INIT_PERIOD
 
         # initialize spline smoother for angular acceleration
         self.imu_smoother = IMUSmoother()

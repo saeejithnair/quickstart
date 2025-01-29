@@ -1,62 +1,38 @@
 # Bracket Bot
 
-[Webpage](https://bracket.bot/)
+[Webpage](https://docs.bracket.bot/)
 
 ----
 
 # Quickstart for setting up the Raspberry Pi and Building and Running Nodes
 
-Skip to step 5 if you have already setup ssh, ssh keys on the Pi and cloned the repos
-
-Skip to step 7 if you have already setup the platform on the Pi and calibrated the motors
-
 In your vscode or cursor editor: Install the vscode remote ssh connect extension: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh.
 
-1. Setup ssh on the Pi
-    ```bash
-    sudo apt-get install -qy ssh git
-    sudo systemctl enable ssh
-    sudo systemctl start ssh
-    # Set the hostname by editing the value in /etc/hostname
-    sudo vi /etc/hostname
-    # update the /etc/hosts file to reflect the new hostname
-    sudo vi /etc/hosts
-    # reboot for changes to take effect
-    sudo reboot
-    ```
+1. Follow these instructions to flash the Pi: https://docs.bracket.bot/docs/flashing-the-sd-card
 2. SSH to the Pi with vscode remote ssh connect extension: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh.
-3. Setup ssh keys for github on the Pi if you haven't already (https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+3. Clone our repo on the Pi
     ```bash
-    ssh-keygen -t ed25519 -C "your_email@example.com"
-    # Adding the key to the ssh-agent
-    eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/id_ed25519
-    # Copy the key to your clipboard and add it to your github account under settings -> SSH and GPG keys
-    cat ~/.ssh/id_ed25519.pub
+    git clone https://github.com/BracketBotCapstone/quickstart.git
     ```
-4. Clone our repo on the Pi (you will have to setup ssh keys for github on the Pi)
-    ```bash
-    git clone git@github.com:BracketBotCapstone/quickstart.git
-    ```
-5. Run this script to setup the platform, [setup_os.sh](scripts/setup_os.sh). Reboot the pi after you do this. Note that the script will ask if you want to install the realsense libraries, you will need to do this to launch all the nodes.
+4. Run this script to setup the platform, [setup_os.sh](scripts/setup_os.sh). Reboot the pi after you do this. Note that the script will ask if you want to install the realsense libraries, you will need to do this to launch all the nodes. Also ensure you monitor the script as it will ask you prompts to answer.
     ```bash
     ./scripts/setup_os.sh
     ```
-6. Run this script to setup the odrives, [motor_controller_setup.sh](scripts/motor_controller_setup.sh).
+5. Run this script to setup the odrives, [motor_controller_setup.sh](scripts/motor_controller_setup.sh).
     ```bash
     ./scripts/motor_controller_setup.sh
     ```
-7. Open the repo on the Pi in the vscode ssh session
-8. Run the following to build the project, the config is the robot config you want to use from the [configs](configs) directory and message config you want to use from the [messages](messages) directory
+6. Open the repo on the Pi in the vscode ssh session
+7. Run the following to build the project, the config is the robot config you want to use from the [configs](configs) directory and message config you want to use from the [messages](messages) directory
     ```bash
-    CONFIG=bot_quickstart CONFIG_MSGS=bot_quickstart_msgs make
+    CONFIG=bot_quickstart CONFIG_MSGS=bot_quickstart_msgs make build
     ```
 8. Then you can just launch nodes in this devcontainer with the following command
     ```bash
     python3 nodes/start_all_nodes.py
     ```
 
-> **Note:** Logs will be written to the logs folder in the directory where you launch the nodes from. Use the DataLogger class in the [data_logger.py](lib/data_logger.py) file to log data to a file.
+> **Note:** Logs will be written to the logs folder in the directory where you launch the nodes from. Use the Logger class in the [logging_utils.py](lib/logging_utils.py) file to log data to a file.
 
 > **Note:** Some of the commands for building and launching nodes are also configured as tasks that can be run in the vscode tasks section or by doing a ctrl+shift+p, selecting `Tasks: Run Task` and then selecting the name of the task you want to run
 

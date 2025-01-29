@@ -1,4 +1,3 @@
-import json
 import time
 
 import numpy as np
@@ -10,15 +9,8 @@ class RealSenseManager:
     Management class for a 435i RealSense Camera, using pyrealsense2.
     """
 
-    def __init__(self, json_path: str):
-        """
-        Initialize the RealSenseManager with a JSON configuration file.
-
-        :param json_path: Path to the JSON configuration file.
-        """
-        # Load JSON parameters for configuration
-        self.jsonObj = json.load(open(json_path))
-        self.json_string = str(self.jsonObj).replace("'", '\"')
+    def __init__(self):
+        """Initialize the RealSenseManager."""
 
         # Initialize RealSense pipeline
         self.pipeline = rs.pipeline()
@@ -26,39 +18,21 @@ class RealSenseManager:
         # Placeholder for RealSense configuration
         self.cfg = None
 
+        self.width = 640
+        self.height = 480
+        self.fps = 30
+        self.param_depth_units = 1000
+
     def start_pipeline(self):
-        """
-        Start the RealSense pipeline with the configuration specified in the JSON file.
-        Handles enabling advanced mode and configuring streams.
-        """
+        """Start the RealSense pipeline. Handles enabling advanced mode and configuring streams."""
         # Create a configuration object
         config = rs.config()
-        cfg = self.pipeline.start(config)
 
-        # Get the device and enable advanced mode
-        dev = cfg.get_device()
-        # advnc_mode = rs.rs400_advanced_mode(dev)
-        # while not advnc_mode.is_enabled():
-        #     print("Trying to enable advanced mode...")
-        #     advnc_mode.toggle_advanced_mode(True)
-        #     # Device will disconnect and re-connect
-        #     print("Sleeping for 5 seconds...")
-        #     time.sleep(5)
-        #     # Re-initialize the device
-        #     dev = cfg.get_device()
-        #     advnc_mode = rs.rs400_advanced_mode(dev)
-        #     print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
-
-        # # Load the JSON configuration into advanced mode
-        # advnc_mode.load_json(self.json_string)
-
-        # Restart the pipeline after loading into advanced mode
-        self.pipeline.stop()
-        print("W: ", int(self.jsonObj['stream-width']))
-        print("H: ", int(self.jsonObj['stream-height']))
-        print("FPS: ", int(self.jsonObj['stream-fps']))
-        config.enable_stream(rs.stream.depth, int(self.jsonObj['stream-width']), int(self.jsonObj['stream-height']), rs.format.z16, int(self.jsonObj['stream-fps']))
-        config.enable_stream(rs.stream.color, int(self.jsonObj['stream-width']), int(self.jsonObj['stream-height']), rs.format.bgr8, int(self.jsonObj['stream-fps']))
+        print("W: ", self.width)
+        print("H: ", self.height)
+        print("FPS: ", self.fps)
+        config.enable_stream(rs.stream.depth, self.width, self.height, rs.format.z16, self.fps)
+        config.enable_stream(rs.stream.color, self.width, self.height, rs.format.bgr8, self.fps)
         self.cfg = self.pipeline.start(config)
 
         # Define colorizer and hole-filling filter
@@ -66,7 +40,7 @@ class RealSenseManager:
         self.hole_filling = rs.hole_filling_filter(1)
 
         # Retrieve scaling units
-        self.depth_scaling = int(self.jsonObj['param-depthunits'])
+        self.depth_scaling = self.param_depth_units
 
     def stop_pipeline(self):
         """
@@ -148,8 +122,7 @@ class RealSenseManager:
     
 if __name__ == "__main__":
     # Start the RealSense pipeline
-    json_path = "lib/mapping/config/default_435i.json"
-    rs_manager = RealSenseManager(json_path)
+    rs_manager = RealSenseManager()
 
     rs_manager.start_pipeline()
 

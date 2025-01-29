@@ -1,11 +1,9 @@
-import os
-
 import cv2
 import numpy as np
 import pywavemap as wave
-import yaml
 from scipy.ndimage import binary_dilation
 
+import lib.constants as CFG
 
 def generate_node_indicies(map_min_cell_width: float, planar_spread: float, z_lower_lim: float, z_upper_lim: float) -> np.ndarray:
     """
@@ -35,51 +33,28 @@ def generate_node_indicies(map_min_cell_width: float, planar_spread: float, z_lo
     return node_idx_mgrid.T.reshape(-1, 3), x.shape[0], z_range.shape[0]
 
 class DynamicOccupancyGrid:
-    """
-    Helper class for creating and updating an occupancy grid from a Wavemap environmental map.
-    """
+    """Helper class for creating and updating an occupancy grid from a Wavemap environmental map."""
 
-    def __init__(self, map_config_loc):
-        """
-        Initialize the DynamicOccupancyGrid with configuration files.
-
-        Args:
-            map_config_loc (str): Path to the map configuration file.
-        """
-        # Load map config
-        with open(map_config_loc, 'r') as stream:
-            try:
-                self.map_config = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                print(exc)
-
-        # Load realsense physical config
-        realsense_config_loc = self.map_config['config_params']['realsense_config_loc']
-        realsense_config_loc = f"/home/{os.getenv('USER')}/{realsense_config_loc}"
-
-        with open(realsense_config_loc, 'r') as stream:
-            try:
-                self.realsense_config = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                print(exc)
+    def __init__(self):
+        """Initialize the DynamicOccupancyGrid."""
 
         # Retrieve height bounds from RealSense config
-        self.r_bc = np.array(self.realsense_config['extrinsics']['r_bc']).reshape(3, )
+        self.r_bc = np.array(CFG.REALSENSE_EXTRINSICS_R_BC).reshape(3, )
 
         # Retrieve lower and upper height limits
-        self.z_lower_lim = self.map_config['grid_params']['z_lower_lim']
-        self.z_upper_lim = self.r_bc[2] + self.map_config['grid_params']['z_upper_lim_epsilon']
+        self.z_lower_lim = CFG.MAPPING_GRID_Z_LOWER_LIM
+        self.z_upper_lim = self.r_bc[2] + CFG.MAPPING_GRID_Z_UPPER_LIM_EPSILON
 
         # Retrieve remaining grid parameters for construction
-        self.query_cell_width = self.map_config['grid_params']['grid_cell_size']
-        self.planar_spread = self.map_config['grid_params']['default_planar_spread']
+        self.query_cell_width = CFG.MAPPING_GRID_GRID_CELL_SIZE
+        self.planar_spread = CFG.MAPPING_GRID_DEFAULT_PLANAR_SPREAD
 
         # Retrieve physical body radius
-        self.physical_body_rad = self.map_config['grid_params']['body_radius'] + self.map_config['grid_params']['body_radius_epsilon']
+        self.physical_body_rad = CFG.MAPPING_GRID_BODY_RADIUS + CFG.MAPPING_GRID_BODY_RADIUS_EPSILON
         self.physical_body_rad_cell_width = int(np.round(self.physical_body_rad / self.query_cell_width))
 
         # Construct node indices for lower body
-        self.z_lower_body_lim = self.map_config['grid_params']['z_lower_body_limit']
+        self.z_lower_body_lim = CFG.MAPPING_GRID_Z_LOWER_BODY_LIMIT
         self.lower_body_indicies, self.grid_length, self.lower_body_grid_height = generate_node_indicies(
             self.query_cell_width, self.planar_spread, self.z_lower_lim, self.z_lower_body_lim)
 
@@ -88,7 +63,7 @@ class DynamicOccupancyGrid:
             self.query_cell_width, self.planar_spread, self.z_lower_body_lim, self.z_upper_lim)
 
         # Generate query height
-        self.query_height = wave.convert.cell_width_to_height(self.query_cell_width, self.map_config['map_params']['min_cell_width'])
+        self.query_height = wave.convert.cell_width_to_height(self.query_cell_width, CFG.MAPPING_MAP_MIN_CELL_WIDTH)
 
         # Initialize query points for lower and upper body
         self.lower_body_query_points = np.concatenate((np.tile(self.query_height, (len(self.lower_body_indicies), 1)), self.lower_body_indicies), axis=1)
@@ -126,7 +101,7 @@ class DynamicOccupancyGrid:
         self.query_cell_width = new_query_cell_width
 
         # Update query height
-        self.query_height = wave.convert.cell_width_to_height(self.query_cell_width, self.map_config['map_params']['min_cell_width'])
+        self.query_height = wave.convert.cell_width_to_height(self.query_cell_width, CFG.MAPPING_MAP_MIN_CELL_WIDTH)
 
         # Generate upper and lower body node indices
         self.lower_body_indicies, self.grid_length, self.lower_body_grid_height = generate_node_indicies(
@@ -159,8 +134,8 @@ class DynamicOccupancyGrid:
         lower_body_occupancy_values_raw = lower_body_prob.reshape((self.lower_body_grid_height, self.grid_length, self.grid_length)).T
 
         # Update occupancy grids
-        self.upper_body_occupancy_grid = np.any(upper_body_occupancy_values_raw > self.map_config['grid_params']['probability_thresh'], axis=2)
-        self.lower_body_occupancy_grid = np.any(lower_body_occupancy_values_raw > self.map_config['grid_params']['probability_thresh'], axis=2)
+        self.upper_body_occupancy_grid = np.any(upper_body_occupancy_values_raw > CFG.MAPPING_GRID_PROBABILITY_THRESH, axis=2)
+        self.lower_body_occupancy_grid = np.any(lower_body_occupancy_values_raw > CFG.MAPPING_GRID_PROBABILITY_THRESH, axis=2)
 
         # Update traversability grid
         self.traversability_grid = generate_traversability_grid(self.upper_body_occupancy_grid, self.lower_body_occupancy_grid, self.physical_body_rad_cell_width)
