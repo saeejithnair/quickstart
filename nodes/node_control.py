@@ -3,6 +3,8 @@
 import logging
 import time
 
+import numpy as np
+
 import lib.constants as CFG
 from lib.control.motor_control import MotorControl
 from lib.planning.d_star import DStar
@@ -66,12 +68,15 @@ class ControlNode(object):
 
         self.localization_initialized = False
         self.target_velocity_msg = None
+        self.previous_target_velocity_msg = None
+        self.stopping_velocity_profile_linear = None
+        self.stopping_velocity_profile_angular = None
         self.path_plan_msg = None
 
         # Initialize lookahead controller
         lookahead_controller = LookaheadController(lookahead_distance=0.25,
-                                                   max_linear_velocity=0.5,
-                                                   max_angular_velocity=1.0
+                                                   max_linear_velocity=0.3,
+                                                   max_angular_velocity=1.5
                                                    )
         try:
             while True:
@@ -99,17 +104,36 @@ class ControlNode(object):
                     # Trajectory planning
                     linear_velocity, angular_velocity = lookahead_controller.vel_request(self.path_plan_msg.path_pose_list, (world_x_pos, world_y_pos, world_yaw))
                     target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
+                    target_velocity_msg.timestamp = time.time()
                     target_velocity_msg.linear_velocity_mps = linear_velocity
                     target_velocity_msg.angular_velocity_radps = angular_velocity
-                    print(f"Linear Velocity: {linear_velocity}, Angular Velocity: {angular_velocity}")
+                    self.previous_target_velocity_msg = target_velocity_msg
                 elif target_velocity_msg is not None:
                     # Use the target velocity received on the topic if available
-                    pass
+                    self.previous_target_velocity_msg = target_velocity_msg
+                    self.stopping_velocity_profile_linear = None
+                    self.stopping_velocity_profile_angular = None
                 else:
                     # If no target velocity is received and no path plan is available, set the target velocity to 0
-                    target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
-                    target_velocity_msg.linear_velocity_mps = 0.0
-                    target_velocity_msg.angular_velocity_radps = 0.0
+                    if self.previous_target_velocity_msg is not None and self.previous_target_velocity_msg.timestamp > time.time() - 2.0:
+                        if self.stopping_velocity_profile_linear is None or self.stopping_velocity_profile_angular is None:
+                            self.stopping_velocity_profile_linear, self.stopping_velocity_profile_angular = generate_stopping_velocity_profile(self.previous_target_velocity_msg, 2.0)
+                        # Get the nearest timestamp match in the profile
+                        nearest_timestamp_linear = min(self.stopping_velocity_profile_linear.keys(), key=lambda x: abs(x - time.time()))
+                        nearest_timestamp_angular = min(self.stopping_velocity_profile_angular.keys(), key=lambda x: abs(x - time.time()))
+                        linear_velocity_mps = self.stopping_velocity_profile_linear[nearest_timestamp_linear]
+                        angular_velocity_radps = self.stopping_velocity_profile_angular[nearest_timestamp_angular]
+                        target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
+                        target_velocity_msg.linear_velocity_mps = linear_velocity_mps
+                        target_velocity_msg.angular_velocity_radps = angular_velocity_radps
+                        target_velocity_msg.timestamp = time.time()
+                    else:
+                        self.previous_target_velocity_msg = None
+                        self.stopping_velocity_profile = None
+                        target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
+                        target_velocity_msg.timestamp = time.time()
+                        target_velocity_msg.linear_velocity_mps = 0.0
+                        target_velocity_msg.angular_velocity_radps = 0.0
 
                 if localization_initialized_msg is not None:
                     self.localization_initialized = localization_initialized_msg.initialized
@@ -137,6 +161,19 @@ class ControlNode(object):
             self.mqtt_subscriber.stop()
             self.mqtt_publisher.stop()
 
+def generate_stopping_velocity_profile(target_velocity_msg: TARGET_VELOCITY_MSG, decel_time_s: float):
+    # Generate a velocity profile that decelerates to 0 in decel_time_s seconds
+    linear_velocity_mps = target_velocity_msg.linear_velocity_mps
+    angular_velocity_radps = target_velocity_msg.angular_velocity_radps
+    time_to_stop = decel_time_s
+    resolution = 0.01  # 10 ms resolution
+    time_steps = np.arange(0, time_to_stop + resolution, resolution)
+    deceleration_rate_linear = linear_velocity_mps / time_to_stop
+    deceleration_rate_angular = angular_velocity_radps / time_to_stop
+    curr_time = time.time()
+    stopping_velocity_profile_linear = {t + curr_time: linear_velocity_mps - deceleration_rate_linear * t for t in time_steps}
+    stopping_velocity_profile_angular = {t + curr_time: angular_velocity_radps - deceleration_rate_angular * t for t in time_steps}
+    return stopping_velocity_profile_linear, stopping_velocity_profile_angular
 
 if __name__ == "__main__":
     control_node = ControlNode()

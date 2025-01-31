@@ -100,7 +100,7 @@ class DrivePathNode(object):
                             continue
 
                 # Check if it's time to replan
-                if time.time() - replan_time > 5.0 and self.target_point_msg is not None and self.traversability_grid_msg is not None and self.robot_pose_grid_coords_msg is not None:
+                if time.time() - replan_time > 10.0 and self.target_point_msg is not None and self.traversability_grid_msg is not None and self.robot_pose_grid_coords_msg is not None:
 
                     print(f"Attempting to plan from ({grid_start_pose_x}, {grid_start_pose_y}) to ({grid_goal_pose_x}, {grid_goal_pose_y})")
 
@@ -116,10 +116,10 @@ class DrivePathNode(object):
                         self.path_pose_list = [convert_grid_coords_to_pose(path[i], self.grid_cell_size_m, self.grid_width_m) for i in range(len(path))]
                         # Print every other point in the path
                         print("Path found:", self.path_pose_list[0], self.path_pose_list[-1])
-                        self.dstar.plot_path()
+                        # self.dstar.plot_path()
                     else:
                         self.path_pose_list = None
-                        self.dstar.plot_path()
+                        # self.dstar.plot_path()
                         print("No path found")
                         continue
 

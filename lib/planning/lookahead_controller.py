@@ -12,8 +12,8 @@ class LookaheadController:
 
     def __init__(self, lookahead_distance, max_linear_velocity, max_angular_velocity,
                  pid_type:PID_type = PID_type.PID,
-                 pid_linear_kp=0.3, pid_linear_kv=0.0, pid_linear_ki=0.0,
-                 pid_angular_kp=0.3, pid_angular_kv=0.0, pid_angular_ki=0.0):
+                 pid_linear_kp=0.4, pid_linear_kv=0.0, pid_linear_ki=0.0,
+                 pid_angular_kp=1.2, pid_angular_kv=0.0, pid_angular_ki=0.0):
         """
         Initialize the LookaheadController with given parameters.
 
@@ -56,15 +56,33 @@ class LookaheadController:
         :param goal_pose: The goal pose to reach.
         :return: The angular error.
         """
-        error_angular = -np.arctan2(goal_pose[1] - current_pose[1],
-                                   goal_pose[0] - current_pose[0]) + np.pi/2 - current_pose[2]
-        
-        # Normalize the angular error to be within [-pi, pi]
-        if error_angular <= -np.pi:
-            error_angular += 2 * np.pi
-        elif error_angular >= np.pi:
-            error_angular -= 2 * np.pi
-        
+
+        # Construct rotation matrices for current and goal poses
+        R_current = np.array([
+            [np.cos(current_pose[2]), -np.sin(current_pose[2]), 0],
+            [np.sin(current_pose[2]), np.cos(current_pose[2]), 0],
+            [0, 0, 1]
+        ])
+
+        goal_theta = np.arctan2(goal_pose[0] - current_pose[0], goal_pose[1] - current_pose[1])
+        goal_pose = [goal_pose[0], goal_pose[1], goal_theta]
+        R_goal = np.array([
+            [np.cos(goal_pose[2]), -np.sin(goal_pose[2]), 0],
+            [np.sin(goal_pose[2]), np.cos(goal_pose[2]), 0],
+            [0, 0, 1]
+        ])
+
+        # Compute the relative rotation matrix
+        R_relative = np.dot(R_goal.T, R_current)
+
+        # Extract the angular error from the relative rotation matrix
+        error_angular = np.arctan2(R_relative[1, 0], R_relative[0, 0])
+
+        if error_angular > 0.5:
+            print("Current Pose: ", current_pose)
+            print("Goal Pose: ", goal_pose)
+            print(f"Error Angular: {error_angular}")
+
         return error_angular
     
     def vel_request(self, path_pose_list, current_pose):
@@ -76,8 +94,6 @@ class LookaheadController:
         error_linear = LookaheadController.calculate_linear_error(current_pose, finalGoal)
         error_angular = LookaheadController.calculate_angular_error(current_pose, goal)
 
-        print(f"Linear Err: {error_linear}, Angular Err: {error_angular}")
-
         if abs(error_angular) > np.pi/2:
             linear_velocity = 0
         else:
@@ -86,7 +102,7 @@ class LookaheadController:
         angular_velocity = self.pid_angular.update(error_angular, time.time(), True)
 
         linear_velocity = np.clip(linear_velocity, -self.max_linear_velocity, self.max_linear_velocity)
-        angular_velocity = 0 # np.clip(angular_velocity, -self.max_angular_velocity, self.max_angular_velocity)
+        angular_velocity = np.clip(angular_velocity, -self.max_angular_velocity, self.max_angular_velocity)
 
         return linear_velocity, angular_velocity
 
@@ -98,9 +114,11 @@ class LookaheadController:
         :param current_pose: The current pose of the robot.
         :return: The goal pose within the lookahead distance.
         """
-        current_x, current_y, current_yaw = current_pose
-        for pose in path_pose_list:
-            distance = np.sqrt((pose[0] - current_x) ** 2 + (pose[1] - current_y) ** 2)
-            if distance >= self.lookahead_distance:
-                return pose
-        return path_pose_list[-1]  # Return the last pose if no pose is found within the lookahead distance
+        poseArray=np.array([current_pose[0], current_pose[1]]) 
+        listGoalsArray=np.array(path_pose_list)
+
+        distanceSquared=np.sum((listGoalsArray-poseArray)**2,
+                               axis=1)
+        closestIndex=np.argmin(distanceSquared)
+
+        return path_pose_list[ min(closestIndex + 1, len(path_pose_list) - 1) ]

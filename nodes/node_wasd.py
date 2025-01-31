@@ -24,6 +24,7 @@ def press(key):
         stop_listening()
 
 def release(key):
+    print(f"Released key: {key}")
     # Stop motors when key is released
     mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.0))
 
@@ -41,6 +42,6 @@ except Exception as e:
     print(f"Error: {e}")
 finally:
     # Clean up
-    mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time()), 0.0, 0.0)
+    mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.0))
     mqtt_publisher.stop()
     print("Shutdown complete.")

@@ -217,7 +217,7 @@ class BalanceController:
                 current_pitch_rate_rad_s = -imu_gyro_data[1]
 
             # Clip the desired velocity to the maximum speed
-            self.desired_vel_mps = max(min(self.desired_vel_mps, CFG.MOTOR_CONTROL_MAX_SPEED_MPS), -CFG.MOTOR_CONTROL_MAX_SPEED_MPS)
+            self.desired_vel_mps = max(min(self.desired_vel_mps, CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS), -CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS)
             
             if self.is_pos_control and abs(current_vel_mps) < 0.01:
                 self.zero_angle_deg += 0.0002*np.sign(current_pitch_rad-self.zero_angle_deg*np.pi/180)
