@@ -1,45 +1,27 @@
-import os
-
 import numpy as np
 import scipy.constants
-import yaml
 from pymlg.numpy import SO3
 
+import lib.constants as CFG
 from lib.localization.modelling.spline_smoothing import AngularAccelerationSmoother
 from lib.messages.raw_imu_data_msg import RAW_IMU_DATA_MSG
 
 
 class IMUPreprocessor:
-    def __init__(self, loc_config : dict):
-        """
-        Initialize the IMUPreprocessor with the localization configuration.
-
-        Parameters
-        ----------
-        loc_config (dict): The localization configuration dictionary.
-        """
-        # open localization config file to retrieve imu config
-        imu_config_loc = loc_config['config_params']['imu_config_loc']
-
-        ## add /home/$USER to the beginning of the path
-        imu_config_loc = f"/home/{os.getenv('USER')}/{imu_config_loc}"
-
-        # retrieve configuration from yaml
-        with open(imu_config_loc, 'r') as stream:
-            self.imu_config = yaml.safe_load(stream)
-
+    def __init__(self):
+        """Initialize the IMUPreprocessor with the localization configuration."""
         # initialize units
-        self.acc_units = self.imu_config['imu_params']['accel_units']
-        self.gyro_units = self.imu_config['imu_params']['gyro_units']
+        self.acc_units = CFG.LOCALIZATION_IMU_ACCEL_UNITS
+        self.gyro_units = CFG.LOCALIZATION_IMU_GYRO_UNITS
 
         # generate transformation matrix
-        self.r_bi = np.array(self.imu_config['imu_params']['r_bi']).reshape(3, 1)
-        self.phi_bi = np.array(self.imu_config['imu_params']['phi_bi']).reshape(3, 1)
+        self.r_bi = np.array(CFG.LOCALIZATION_IMU_R_BI).reshape(3, 1)
+        self.phi_bi = np.array(CFG.LOCALIZATION_IMU_PHI_BI).reshape(3, 1)
 
         self.C_bi = SO3.Exp(np.array(self.phi_bi))
 
         # initialize spline smoother for angular acceleration
-        self.angular_acceleration_smoother = AngularAccelerationSmoother(self.imu_config['imu_params']['spline_samples'])
+        self.angular_acceleration_smoother = AngularAccelerationSmoother(CFG.LOCALIZATION_IMU_SPLINE_SAMPLES)
 
     def preprocess_sample(self, imu_data : RAW_IMU_DATA_MSG):
         """

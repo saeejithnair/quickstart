@@ -3,52 +3,27 @@ import time
 
 import numpy as np
 import pywavemap as wave
-import yaml
 from pymlg.numpy import SE3, SO3
 
+import lib.constants as CFG
 from lib.mapping.grid_helpers import DynamicOccupancyGrid
 from lib.sensors.realsense.realsense_manager import RealSenseManager
 
 
 class DepthWavemapManager:
-    def __init__(self, map_config_loc: str):
-        """
-        Initialize the DepthWavemapManager with the given map configuration location.
-
-        Parameters
-        ----------
-        map_config_loc : str
-            Path to the map configuration YAML file.
-        """
+    def __init__(self):
+        """Initialize the DepthWavemapManager."""
         print("Initializing DepthWavemapManager!")
 
-        # Retrieve configuration yaml
-        with open(map_config_loc, 'r') as stream:
-            self.map_config = yaml.safe_load(stream)
-
-        # Retrieve realsense configuration location
-        realsense_config_loc = self.map_config['config_params']['realsense_config_loc']
-        # Add /home/$USER to the beginning of the path
-        realsense_config_loc = f"/home/{os.getenv('USER')}/{realsense_config_loc}"
-
-        # Retrieve realsense configuration
-        with open(realsense_config_loc, 'r') as stream:
-            self.realsense_config = yaml.safe_load(stream)
-
         # Instantiate occupancy grid
-        self.occupancy_grid = DynamicOccupancyGrid(map_config_loc)
-
-        # Retrieve JSON file location for RealSense
-        json_file_loc = self.realsense_config['json_file_loc']
-        # Add /home/$USER to the beginning of the path
-        json_file_loc = f"/home/{os.getenv('USER')}/{json_file_loc}"
+        self.occupancy_grid = DynamicOccupancyGrid()
 
         # Start RealSense retrieval pipeline
-        self.rs_manager = RealSenseManager(json_file_loc)
+        self.rs_manager = RealSenseManager()
 
         # Retrieve extrinsics
-        r_bc = np.array(self.realsense_config['extrinsics']['r_bc']).reshape(1, 3)
-        phi_bc = np.array(self.realsense_config['extrinsics']['phi_bc']).reshape(1, 3)
+        r_bc = np.array(CFG.REALSENSE_EXTRINSICS_R_BC).reshape(1, 3)
+        phi_bc = np.array(CFG.REALSENSE_EXTRINSICS_PHI_BC).reshape(1, 3)
 
         # Compute rotation matrix from rotation vector
         C_bc = SO3.Exp(phi_bc)
@@ -57,7 +32,7 @@ class DepthWavemapManager:
         self.T_bc = SE3.from_components(C_bc, r_bc)
 
         # Update rate
-        self.update_rate = self.map_config['config_params']['update_rate']
+        self.update_rate = CFG.MAPPING_UPDATE_RATE
 
         # Track current time
         self.t_k = None
@@ -66,10 +41,10 @@ class DepthWavemapManager:
         self.local_submap = wave.Map.create({
             "type": "hashed_wavelet_octree",
             "min_cell_width": {
-                "meters": self.map_config['map_params']['min_cell_width']
+                "meters": CFG.MAPPING_MAP_MIN_CELL_WIDTH
             },
             "remove_blocks_beyond_distance": {
-                "meters": self.map_config['map_params']['block_removal_distance']
+                "meters": CFG.MAPPING_MAP_BLOCK_REMOVAL_DISTANCE
             }
         })
 
@@ -79,13 +54,13 @@ class DepthWavemapManager:
         self.pipeline.add_operation({
             "type": "threshold_map",
             "once_every": {
-                "seconds": self.map_config['map_params']['threshold_delta']
+                "seconds": CFG.MAPPING_MAP_THRESHOLD_DELTA
             }
         })
         self.pipeline.add_operation({
             "type": "prune_map",
             "once_every": {
-                "seconds": self.map_config['map_params']['pruning_delta']
+                "seconds": CFG.MAPPING_MAP_PRUNING_DELTA
             }
         })
 
@@ -114,21 +89,21 @@ class DepthWavemapManager:
                 "measurement_model": {
                     "type": "continuous_ray",
                     "range_sigma": {
-                        "meters": self.map_config['map_params']['range_sigma']
+                        "meters": CFG.MAPPING_MAP_RANGE_SIGMA
                     },
-                    "scaling_free": self.map_config['map_params']['scaling_free'],
-                    "scaling_occupied": self.map_config['map_params']['scaling_occupied']
+                    "scaling_free": CFG.MAPPING_MAP_SCALING_FREE,
+                    "scaling_occupied": CFG.MAPPING_MAP_SCALING_OCCUPIED
                 },
                 "integration_method": {
                     "type": "hashed_wavelet_integrator",
                     "min_range": {
-                        "meters": self.map_config['map_params']['min_range']
+                        "meters": CFG.MAPPING_MAP_MIN_RANGE
                     },
                     "max_range": {
-                        "meters": self.map_config['map_params']['max_range']
+                        "meters": CFG.MAPPING_MAP_MAX_RANGE
                     },
                     "max_update_resolution": {
-                        "meters": self.map_config['map_params']['max_update_resolution']
+                        "meters": CFG.MAPPING_MAP_MAX_UPDATE_RESOLUTION
                     },
                 },
             })
@@ -251,7 +226,7 @@ class DepthWavemapManager:
         map_name = "map_" + str(int(time.time())) + ".wvmp"
 
         # Save the map
-        output_map_path = self.map_config['map_params']['output_map_path'] + map_name
+        output_map_path = CFG.MAPPING_MAP_OUTPUT_MAP_PATH + map_name
         # Add /home/$USER to the beginning of the path
         output_map_path = f"/home/{os.getenv('USER')}/{output_map_path}"
 

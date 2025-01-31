@@ -1,32 +1,38 @@
+import os
 import time
+from io import BytesIO
 
+import alsaaudio
 import numpy as np
+import soundfile as sf
+import sounddevice as sd
+from scipy import signal
+from dotenv import load_dotenv
+
+from openai import OpenAI
+from elevenlabs.client import ElevenLabs
 from transformers import pipeline
 from transformers.pipelines.audio_utils import ffmpeg_microphone_live
 
+
+load_dotenv()
+PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
+ELEVEN_LABS_API_KEY = os.getenv('ELEVEN_LABS_API_KEY')
+
+
 device = 'cpu'
 
+# TODO: Can you find/make a faster wakeword model?
 classifier = pipeline(
     # "audio-classification", model="MIT/ast-finetuned-speech-commands-v2", device=device
     "audio-classification", model="0xb1/wav2vec2-base-finetuned-speech_commands-v0.02", device=device # faster
 )
+
 model = "openai/whisper-tiny.en"
 # model = "distil-whisper/distil-small.en"
 transcriber = pipeline(
     "automatic-speech-recognition", model=model, device=device
 )
-
-
-PERPLEXITY_API_KEY="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"
-ELEVEN_LABS_API_KEY = "sk_bf7e6fbfd13cdee351b09adfd2c7a5ceffcfabf89f60fbdb"
-
-from io import BytesIO
-
-import alsaaudio
-import sounddevice as sd
-import soundfile as sf
-from elevenlabs.client import ElevenLabs
-from scipy import signal
 
 
 def set_alsa_volume(volume=75):
@@ -49,7 +55,10 @@ def set_alsa_volume(volume=75):
     except alsaaudio.ALSAAudioError as e:
         print(f"Error setting volume: {e}")
 
+
 def speak_text(text, voice="Brian"):
+    """Generates audio from the given text using ElevenLabs API and plays through audio device."""
+
     # Check for special phrases that use pre-recorded audio
     text_normalized = text.lower().strip('-.,!?')
     if text_normalized in ["wow", "uhhhhhhhhh lemme think about that"]:
@@ -72,9 +81,9 @@ def speak_text(text, voice="Brian"):
             sd.play(data, samplerate=sample_rate, device=device_id)
             sd.wait()
             return
-        except Exception:
+        except Exception as e:
             pass
-    """Speaks the given text using ElevenLabs API and plays through audio device."""
+    
     # Initialize ElevenLabs client
     client = ElevenLabs(api_key=ELEVEN_LABS_API_KEY)
     
@@ -107,7 +116,7 @@ def speak_text(text, voice="Brian"):
         sd.play(data, samplerate=sample_rate, device=device_id)
         sd.wait()
         
-        # Save to wav if text was "wow" or "uhh"
+        # Save to wav if text was "wow" or "uhh" (cache for future use)
         if text_normalized in ["wow", "uhhhhhhhhh lemme think about that"]:
             filename = "wow.wav" if text_normalized == "wow" else "uhh.wav"
             sf.write(filename, data, int(sample_rate))
@@ -116,149 +125,9 @@ def speak_text(text, voice="Brian"):
         print(f"Error playing audio: {e}")
 
 
-import pyaudio
-
-
 def speak_text_stream(text, voice="Brian"):
-    # Check for special phrases that use pre-recorded audio
-    text_normalized = text.lower().strip('-.,!?')
-    if text_normalized in ["wow", "uhhhhhhhhh lemme think about that"]:
-        # Load and play the corresponding audio file
-        filename = "wow.wav" if text_normalized == "wow" else "uhh.wav"
-        try:
-            data, sample_rate = sf.read(filename, dtype='float32')
-            
-            # Initialize PyAudio
-            p = pyaudio.PyAudio()
-            
-            # Find the device index for "UACDemoV1.0"
-            device_id = None
-            for i in range(p.get_device_count()):
-                device_info = p.get_device_info_by_index(i)
-                if device_info['name'] == "UACDemoV1.0":
-                    device_id = i
-                    break
-            
-            if device_id is None:
-                raise Exception("Audio device UACDemoV1.0 not found")
-                
-            device_sample_rate = int(p.get_device_info_by_index(device_id)['defaultSampleRate'])
-
-            # Resample if needed
-            if sample_rate != device_sample_rate:
-                number_of_samples = int(round(len(data) * float(device_sample_rate) / sample_rate))
-                data = signal.resample(data, number_of_samples)
-                sample_rate = device_sample_rate
-
-            # Open stream
-            stream = p.open(format=pyaudio.paFloat32,
-                          channels=1,
-                          rate=int(sample_rate),
-                          output=True,
-                          output_device_index=device_id)
-
-            # Play the audio
-            stream.write(data.tobytes())
-            
-            # Cleanup
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
-            return
-            
-        except Exception as e:
-            print(f"Error playing audio file: {e}")
-
-    """Streams and plays text-to-speech audio using ElevenLabs API."""
-    client = ElevenLabs(api_key=ELEVEN_LABS_API_KEY)
-    
-    # Initialize PyAudio
-    p = pyaudio.PyAudio()
-    
-    # Find the device index for "UACDemoV1.0"
-    device_id = None
-    for i in range(p.get_device_count()):
-        device_info = p.get_device_info_by_index(i)
-        if device_info['name'] == "UACDemoV1.0":
-            device_id = i
-            break
-            
-    if device_id is None:
-        raise Exception("Audio device UACDemoV1.0 not found")
-        
-    device_sample_rate = int(p.get_device_info_by_index(device_id)['defaultSampleRate'])
-
-    # Generate streaming audio from text
-    audio_stream = client.generate(
-        text=text,
-        voice=voice,
-        model="eleven_multilingual_v2",
-        stream=True,
-        output_format="pcm_24000"  # Changed to PCM format instead of MP3
-    )
-
-    try:
-        # Open audio stream
-        stream = p.open(format=pyaudio.paFloat32,
-                       channels=1,
-                       rate=device_sample_rate,
-                       output=True,
-                       output_device_index=device_id)
-
-        # Process and play audio chunks as they arrive
-        chunks_buffer = []
-        for chunk in audio_stream:
-            if chunk:
-                # Convert bytes to numpy array
-                audio_data = np.frombuffer(chunk, dtype=np.int16)
-                # Normalize to float32 between -1 and 1
-                audio_data = audio_data.astype(np.float32) / 32768.0
-                
-                # Resample if needed (24000 to device_sample_rate)
-                if device_sample_rate != 24000:
-                    number_of_samples = int(round(len(audio_data) * float(device_sample_rate) / 24000))
-                    audio_data = signal.resample(audio_data, number_of_samples)
-
-                chunks_buffer.append(audio_data)
-
-                # Play after accumulating 25 chunks
-                if len(chunks_buffer) >= 25:
-                    # Concatenate chunks
-                    combined_audio = np.concatenate(chunks_buffer)
-                    
-                    # Calculate and print duration in seconds
-                    duration = len(combined_audio) / device_sample_rate
-                    print(f"Combined chunks duration: {duration:.2f} seconds")
-                    
-                    # Play the combined audio
-                    stream.write(combined_audio.tobytes())
-                    
-                    # Clear buffer
-                    chunks_buffer = []
-
-        # Play any remaining chunks
-        if chunks_buffer:
-            combined_audio = np.concatenate(chunks_buffer)
-            stream.write(combined_audio.tobytes())
-
-        # Save to wav if text was "wow" or "uhh"
-        if text_normalized in ["wow", "uhhhhhhhhh lemme think about that"]:
-            filename = "wow.wav" if text_normalized == "wow" else "uhh.wav"
-            sf.write(filename, data, int(sample_rate))
-
-        # Cleanup
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-            
-    except Exception as e:
-        print(f"Error playing audio: {e}")
-        # Cleanup in case of error
-        if 'stream' in locals():
-            stream.stop_stream()
-            stream.close()
-        if 'p' in locals():
-            p.terminate()
+    #TODO: Implement a fully streamed version of speak_text which plays audio as it is streamed from ElevenLabs API
+    pass
 
 
 def wait_for_wow(
@@ -295,7 +164,6 @@ def transcribe(chunk_length_s=5.0, stream_chunk_s=2.0):
     sampling_rate = transcriber.feature_extractor.sampling_rate
     # sampling_rate = classifier.feature_extractor.sampling_rate
 
-
     print("Start speaking...")
     try:
         mic = None
@@ -327,7 +195,7 @@ def transcribe(chunk_length_s=5.0, stream_chunk_s=2.0):
                         # print(current_text)
                     
                     if current_text.endswith('?'):
-                        speak_text("-uhhhhhhhhh lemme think about that...")
+                        speak_text("uhhhhhhhhh lemme think about that...")
                         answer = ask_perplexity(current_text)
                         print(answer)
                         speak_text(answer)
@@ -340,7 +208,7 @@ def transcribe(chunk_length_s=5.0, stream_chunk_s=2.0):
                         break
 
             if not weather_said:
-                speak_text("Bitch what did you say WOW for!")
+                speak_text("Hey what did you say WOW for!")
             
     except KeyboardInterrupt:
         print("\nStopped by user")
@@ -358,7 +226,7 @@ def format_weather_info(data):
     wind_speed = current['wind_speed']
     
     # Construct weather message
-    message = "\nCurrent weather conditions:"
+    message = f"\nCurrent weather conditions:"
     message += f"\nTemperature: {temp}°C (feels like {feels_like}°C)"
     message += f"\nConditions: {weather}"
     message += f"\nHumidity: {humidity}%"
@@ -366,17 +234,15 @@ def format_weather_info(data):
     
     return message
 
-def on_weather_change():
 
+def on_weather_change():
     try:
         weather = weather_perplexity()
         print(weather)
         speak_text(weather)
         
     except Exception as e:
-        print(f"\nError getting weather: {e!s}\n")
-
-from openai import OpenAI
+        print(f"\nError getting weather: {str(e)}\n")
 
 
 def weather_perplexity():
@@ -412,7 +278,7 @@ def weather_perplexity():
         return weather_info
     
     except Exception as e:
-        return f"Error getting weather information: {e!s}"
+        return f"Error getting weather information: {str(e)}"
     
 
 def ask_perplexity(question):
@@ -440,10 +306,8 @@ def ask_perplexity(question):
         return response.choices[0].message.content
     
     except Exception as e:
-        return f"Error getting response: {e!s}"
+        return f"Error getting response: {str(e)}"
 
 
-# speak_text_stream("hey my name is beff jezos I scam retards")
-# speak_text("hey my name is beff jezos I scam retards")
 set_alsa_volume(100)
 transcribe()

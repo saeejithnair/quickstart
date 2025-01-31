@@ -4,7 +4,6 @@
 
 [MOTOR_CONTROL]
   SERIAL_PORT = "/dev/ttyAMA1"
-  ENABLE_MOTOR_CONTROL = "1"
   MAX_SPEED_MPS = 1.0
   MAX_TORQUE_NM = 4.0
   LEFT_MOTOR_DIR = 1
@@ -20,8 +19,73 @@
 [RERUN]
   HOST_IP_ADDRESS = "10.0.0.220"
 
-[LOCALIZATION]
-  BASE_CONFIG_LOC = "quickstart/lib/localization/config/base_loc_conf.yaml"
+[LOCALIZATION_PHYSICAL]
+  GRAVITY_UP = false
+  R_0 = [0, 0, 0]
+  PHI_0 = [0, 0, 0]
+  PERTURBATION = "left"
+
+[LOCALIZATION_UNCERTAINTY]
+  R_ENC = 0.0001
+  R_ENC_PSEUDO = 0.0000001
+  P_POS = 1e-6
+  P_VEL = 1e-6
+  P_PHI = 1e-4
+  P_GYRO_BIAS = 1e-6
+  P_ACCEL_BIAS = 0.5
+  R_ZUPT_ANG = 0.01
+  R_ZUPT_VEL = 0.1
+
+[ZUPT_PARAMS]
+  SPLINE_SAMPLES = 10
+  ZUPT_THRESHOLD = 0.01
+
+[LOCALIZATION_INITIALIZATION]
+  STATIC_INIT_PERIOD = 2.0
+
+# Configuration for the Adafruit LSM6DS3TR-C 6DOF IMU - https://cdn-shop.adafruit.com/product-files/4503/4503_LSM6DS3TR-C_datasheet.pdf
+[LOCALIZATION_IMU]
+  UPDATE_RATE = 200
+  # continuous-time IMU noise parameters (see https://github.com/ethz-asl/kalibr/wiki/IMU-Noise-Model)
+  SIGMA_GYRO_CT = 1.745e-3
+  SIGMA_ACCEL_CT = 6.0e-2
+  SIGMA_GYRO_BIAS_CT = 4.848e-5
+  SIGMA_ACCEL_BIAS_CT = 1.5e-4
+  # components of T_bi, where F_{b} represents the robot body frame, and F_{i} is the IMU frame
+  R_BI = [-0.054, 0.0, 0.0]
+  PHI_BI = [0.0, 0.0, -1.5707963]
+  # unit specification
+  ACCEL_UNITS = "m/s^2"
+  GYRO_UNITS = "rad/s"
+  # spline specification for angular acceleration
+  SPLINE_SAMPLES = 4
+
+[REALSENSE_EXTRINSICS]
+  R_BC = [0.0, 0.0739853, 1.4884446199999999]
+  PHI_BC = [-1.46151515, 1.46151515, 1.02336392]
 
 [MAPPING]
-  BASE_CONFIG_LOC = "quickstart/lib/mapping/config/base_map_conf.yaml"
+  UPDATE_RATE = 10
+
+[MAPPING_MAP]
+  MIN_CELL_WIDTH = 0.05
+  THRESHOLD_DELTA = 2.0
+  RANGE_SIGMA = 0.03
+  SCALING_FREE = 0.4
+  SCALING_OCCUPIED = 0.8
+  MIN_RANGE = 0.3
+  MAX_RANGE = 2.5
+  MAX_UPDATE_RESOLUTION = 0.05
+  BLOCK_REMOVAL_DISTANCE = 30
+  PRUNING_DELTA = 2.0
+  OUTPUT_MAP_PATH = "quickstart/lib/mapping/maps/"
+
+[MAPPING_GRID]
+  DEFAULT_PLANAR_SPREAD = 20
+  GRID_CELL_SIZE = 0.05
+  Z_LOWER_LIM = 0.05
+  Z_LOWER_BODY_LIMIT = 0.15
+  BODY_RADIUS = 0.14
+  BODY_RADIUS_EPSILON = 0.02
+  Z_UPPER_LIM_EPSILON = 0.1
+  PROBABILITY_THRESH = 0.75

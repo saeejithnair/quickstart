@@ -13,6 +13,22 @@ export ssh_port=8888
 read -p "Do you want to reboot at the end of the script for all changes to take effect? (yes/no): " user_input
 user_input=${user_input,,}
 
+# Configure swap space because building the pip packages needs a lot of memory
+echo "Configuring swap space..."
+sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/' /etc/dphys-swapfile
+echo "Restarting swap service..."
+sudo /etc/init.d/dphys-swapfile stop
+sudo /etc/init.d/dphys-swapfile start
+
+echo "Setting the language to en_US.UTF-8..."
+# create /etc/environment if it doesnt exist 
+if [ ! -f /etc/environment ]; then
+    sudo touch /etc/environment
+fi
+echo "LC_ALL=en_US.UTF-8" | sudo tee -a /etc/environment
+echo "LANG=en_US.UTF-8" | sudo tee -a /etc/environment
+sudo locale-gen en_US en_US.UTF-8
+
 echo "Updating package lists..."
 sudo apt-get install -y software-properties-common && sudo apt-get update # Update package lists
 
@@ -108,7 +124,7 @@ if ! grep -Fxq 'source ~/.venv/bin/activate' ~/.bashrc; then
 fi
 
 echo "Installing python packages..."
-pip install -e "$HOME/quickstart"
+pip install --no-cache-dir -e "$HOME/quickstart"
 
 echo "Building the config and messages..."
 cd "$HOME/quickstart"

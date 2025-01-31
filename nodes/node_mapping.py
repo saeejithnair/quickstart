@@ -1,8 +1,6 @@
 import logging
-import os
 import time
 
-import lib.constants as CFG
 from lib.localization.utils.input_processing import (
     form_flattened_occupancy_grid_message,
     form_robot_pose_grid_coords_message,
@@ -32,14 +30,8 @@ class DepthWavemapNode:
         self.logger = Logger('depth_wavemap_node', 'logs/depth_wavemap_node.log', level=logging_level)
         self.logger.info("Initializing DepthWavemapNode")
 
-        # Retrieve yaml file location
-        map_config_loc = os.getenv("BASE_CONFIG_LOC", CFG.MAPPING_BASE_CONFIG_LOC)
-
-        # Add /home/$USER to the beginning of the path
-        map_config_loc = f"/home/{os.getenv('USER')}/{map_config_loc}"
-
         # Initialize depth wavemap manager
-        self.depth_wavemap_manager = DepthWavemapManager(map_config_loc)
+        self.depth_wavemap_manager = DepthWavemapManager()
 
         # Initialize the publisher
         self.publisher = MQTTPublisher(

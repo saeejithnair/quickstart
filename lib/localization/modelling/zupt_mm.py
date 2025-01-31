@@ -5,20 +5,18 @@ from pymlg.numpy import SO3
 
 from lib.localization.modelling.spline_smoothing import EncoderVelocitySmoother
 
+import lib.constants as CFG
+
 class ZuPTDetector:
-    def __init__(self, loc_config : dict):
+    def __init__(self):
         """
         Initialize the ZuPTDetector with the localization configuration.
-
-        Parameters
-        ----------
-        loc_config (dict): The localization configuration dictionary.
         """
         # retrieve ZuPT threshold
-        self.zupt_threshold = loc_config['zupt_params']['zupt_threshold']
+        self.zupt_threshold = CFG.ZUPT_PARAMS_ZUPT_THRESHOLD
 
         # retrieve spline sample #
-        self.spline_samples = loc_config['zupt_params']['spline_samples']
+        self.spline_samples = CFG.ZUPT_PARAMS_SPLINE_SAMPLES
 
         # initialize spline smoother for velocity
         self.encoder_smoother = EncoderVelocitySmoother(self.spline_samples, self.zupt_threshold)

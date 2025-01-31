@@ -1,11 +1,9 @@
 """Main control node."""
 
 import logging
-import os
 import time
 
 import numpy as np
-import yaml
 
 import lib.constants as CFG
 from lib.control.motor_control import MotorControl
@@ -62,19 +60,9 @@ class ControlNode(object):
 
         self.dstar = DStar()  # Initialize D* pathfinding algorithm
 
-        # Grid parameters
-        # Retrieve yaml file location
-        map_config_loc = os.getenv("BASE_CONFIG_LOC", CFG.MAPPING_BASE_CONFIG_LOC)
-        # Add /home/$USER to the beginning of the path
-        map_config_loc = f"/home/{os.getenv('USER')}/{map_config_loc}"
-
-        # Retrieve configuration yaml
-        with open(map_config_loc, 'r') as stream:
-            self.map_config = yaml.safe_load(stream)
-
         # Extract grid parameters from configuration
-        self.grid_cell_size_m = self.map_config['grid_params']['grid_cell_size']
-        self.grid_width_m = self.map_config['grid_params']['default_planar_spread']
+        self.grid_cell_size_m = CFG.MAPPING_GRID_GRID_CELL_SIZE
+        self.grid_width_m = CFG.MAPPING_GRID_DEFAULT_PLANAR_SPREAD
 
         self.loop_rate_hz = 300
 
@@ -82,9 +70,7 @@ class ControlNode(object):
         self.mqtt_subscriber.start()
         self.mqtt_publisher.run()
 
-        enable_motor_control = os.getenv("ENABLE_MOTOR_CONTROL", CFG.MOTOR_CONTROL_ENABLE_MOTOR_CONTROL)
-        controller = MotorControl(enable_motor_control=True if enable_motor_control == "1" else False,
-                                  logger=self.logger)
+        controller = MotorControl(logger=self.logger)
 
         self.velocity_target = 0.0
         self.yaw_rate_target = 0.0
@@ -211,9 +197,10 @@ class ControlNode(object):
 
                 # Call the balance_step function with the updated imu_data
                 if self.localization_initialized:
-                    l_vel_mps, r_vel_mps = controller.control_step(velocity_target_mps=self.velocity_target,
-                                                                    yaw_rate_target_rad_s=self.yaw_rate_target)
+                    controller.set_linear_angular_velocities(self.velocity_target, self.yaw_rate_target)
 
+                    l_vel_mps = controller.get_left_motor_velocity()
+                    r_vel_mps = controller.get_right_motor_velocity()
                     wheel_velocities_msg = WHEEL_VELOCITIES_DATA_MSG()
                     wheel_velocities_msg.timestamp = time.time()
                     wheel_velocities_msg.left_vel_mps = l_vel_mps

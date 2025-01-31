@@ -1,9 +1,6 @@
-import os
-
 import numpy as np
 import scipy.constants
 import torch
-import yaml
 from navlie.filters import ExtendedKalmanFilter
 from navlie.lib import IMU, IMUKinematics, IMUState
 from navlie.lib.imu import get_unbiased_imu
@@ -11,38 +8,24 @@ from navlie.types import Measurement, StateWithCovariance
 from pymlg.numpy import SE23
 from pymlg.torch import SO3 as SO3t
 
+import lib.constants as CFG
 from lib.localization.modelling.wheel_encoder_mm import WheelEncoderGravityAligned
 
 from lib.localization.modelling.zupt_mm import ZuPT, ZuPTDetector
 
 
 class WheelEncoderEKF():
-    """
-    EKF for a simple wheel encoder model
-    """
+    """EKF for a simple wheel encoder model"""
 
-    def __init__(self, yaml_filepath : str):
-
-        # retrieve relevant physical parameters from yaml file
-        with open(yaml_filepath, 'r') as f:
-            self.loc_params = yaml.safe_load(f)
-
-        # retrieve IMU configuration yaml
-        imu_config_loc = self.loc_params['config_params']['imu_config_loc']
-
-        ## add /home/$USER to the beginning of the path
-        imu_config_loc = f"/home/{os.getenv('USER')}/{imu_config_loc}"
-
-        # retrieve configuration from yaml
-        with open(imu_config_loc, 'r') as stream:
-            self.imu_config = yaml.safe_load(stream)
+    def __init__(self):
+        """Initialize the WheelEncoderEKF with the localization configuration."""
 
         # create the wheel encoder measurement model
-        R_enc_meas = self.loc_params['uncertainty_params']['R_enc']
-        R_enc_pseudo = self.loc_params['uncertainty_params']['R_enc_pseudo']
+        R_enc_meas = CFG.LOCALIZATION_UNCERTAINTY_R_ENC
+        R_enc_pseudo = CFG.LOCALIZATION_UNCERTAINTY_R_ENC_PSEUDO
 
         # retrieve perturbation direction
-        self.perturbation = self.loc_params['config_params']['perturbation']
+        self.perturbation = CFG.LOCALIZATION_PHYSICAL_PERTURBATION
 
         # form measurement uncertainty matrix
         R_enc = np.eye(3)
@@ -51,12 +34,12 @@ class WheelEncoderEKF():
         R_enc[2, :] *= R_enc_pseudo
         self.encoder = WheelEncoderGravityAligned(R_enc, self.perturbation)
 
-        sigma_gyro_ct = self.imu_config['imu_params']['sigma_gyro_ct']
-        sigma_accel_ct = self.imu_config['imu_params']['sigma_accel_ct']
-        sigma_gyro_bias_ct = self.imu_config['imu_params']['sigma_gyro_bias_ct']
-        sigma_accel_bias_ct = self.imu_config['imu_params']['sigma_accel_bias_ct']
+        sigma_gyro_ct = CFG.LOCALIZATION_IMU_SIGMA_GYRO_CT
+        sigma_accel_ct = CFG.LOCALIZATION_IMU_SIGMA_ACCEL_CT
+        sigma_gyro_bias_ct = CFG.LOCALIZATION_IMU_SIGMA_GYRO_BIAS_CT
+        sigma_accel_bias_ct = CFG.LOCALIZATION_IMU_SIGMA_ACCEL_BIAS_CT
 
-        self.delta_t = 1 / self.imu_config['imu_params']['update_rate']
+        self.delta_t = 1 / CFG.LOCALIZATION_IMU_UPDATE_RATE
 
         Q_c = np.eye(12)
         Q_c[0:3, 0:3] *= sigma_gyro_ct**2
@@ -65,16 +48,16 @@ class WheelEncoderEKF():
         Q_c[9:12, 9:12] *= sigma_accel_bias_ct**2
 
         # define gravity-up vector
-        if self.loc_params['physical_params']['gravity_up']:
+        if CFG.LOCALIZATION_PHYSICAL_GRAVITY_UP:
             self.g_a = np.array([0, 0, scipy.constants.g]).reshape(3, 1)
         else:
             self.g_a = np.array([0, 0, -scipy.constants.g]).reshape(3, 1)
 
         # define ZuPT measurement model
-        self.zupt = ZuPT(self.perturbation, self.loc_params['uncertainty_params']['R_zupt_ang'], self.loc_params['uncertainty_params']['R_zupt_vel'], self.g_a)
+        self.zupt = ZuPT(self.perturbation, CFG.LOCALIZATION_UNCERTAINTY_R_ZUPT_ANG, CFG.LOCALIZATION_UNCERTAINTY_R_ZUPT_ANG, self.g_a)
 
         # define zero-velocity detector
-        self.zupt_detector = ZuPTDetector(self.loc_params)
+        self.zupt_detector = ZuPTDetector()
 
         self.Q_imu = Q_c / self.delta_t
         self.ekf = ExtendedKalmanFilter(IMUKinematics(self.Q_imu, self.g_a))
@@ -147,11 +130,11 @@ class WheelEncoderEKF():
         P_0 = np.eye(15)
 
         # allocate specific uncertainties based on configuration
-        P_0[0:3, 0:3] = np.eye(3) * np.array(self.loc_params['uncertainty_params']['P_phi'], dtype=np.float64)
-        P_0[3:6, 3:6] = np.eye(3) * np.array(self.loc_params['uncertainty_params']['P_vel'], dtype=np.float64)
-        P_0[6:9, 6:9] = np.eye(3) * np.array(self.loc_params['uncertainty_params']['P_pos'], dtype=np.float64)
-        P_0[9:12, 9:12] = np.eye(3) * np.array(self.loc_params['uncertainty_params']['P_gyro_bias'], dtype=np.float64)
-        P_0[12:15, 12:15] = np.eye(3) * np.array(self.loc_params['uncertainty_params']['P_accel_bias'], dtype=np.float64)
+        P_0[0:3, 0:3] = np.eye(3) * np.array(CFG.LOCALIZATION_UNCERTAINTY_P_PHI, dtype=np.float64)
+        P_0[3:6, 3:6] = np.eye(3) * np.array(CFG.LOCALIZATION_UNCERTAINTY_P_VEL, dtype=np.float64)
+        P_0[6:9, 6:9] = np.eye(3) * np.array(CFG.LOCALIZATION_UNCERTAINTY_P_POS, dtype=np.float64)
+        P_0[9:12, 9:12] = np.eye(3) * np.array(CFG.LOCALIZATION_UNCERTAINTY_P_GYRO_BIAS, dtype=np.float64)
+        P_0[12:15, 12:15] = np.eye(3) * np.array(CFG.LOCALIZATION_UNCERTAINTY_P_ACCEL_BIAS, dtype=np.float64)
 
         self.x_k = StateWithCovariance(x_k_pose, P_0)
 

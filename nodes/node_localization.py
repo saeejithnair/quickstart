@@ -1,10 +1,8 @@
 import logging
-import os
 import time
 
 import numpy as np
 import scipy.constants
-import yaml
 from navlie.lib import IMU
 
 import lib.constants as CFG
@@ -66,19 +64,11 @@ class LocalizationIMUEncoder:
             }
         )
 
-        # Retrieve YAML file location
-        base_config_loc = os.getenv("BASE_CONFIG_LOC", CFG.LOCALIZATION_BASE_CONFIG_LOC)
-        base_config_loc = f"/home/{os.getenv('USER')}/{base_config_loc}"
-
-        # Load configuration from YAML file
-        with open(base_config_loc, 'r') as stream:
-            self.loc_config = yaml.safe_load(stream)
-
         # Declare IMUPreprocessor and EKF
-        self.imu_preprocessor = IMUPreprocessor(self.loc_config)
-        self.ekf = WheelEncoderEKF(yaml_filepath=base_config_loc)
+        self.imu_preprocessor = IMUPreprocessor()
+        self.ekf = WheelEncoderEKF()
 
-        self.static_initializer = StaticInitializer(self.loc_config)
+        self.static_initializer = StaticInitializer()
 
         self.initialized = False
         self.loop_rate_hz = 200
@@ -136,7 +126,7 @@ class LocalizationIMUEncoder:
 
                     C_ab_0 = self.static_initializer.get_initial_rotation_estimate()
 
-                    if self.loc_config['physical_params']['gravity_up']:
+                    if CFG.LOCALIZATION_PHYSICAL_GRAVITY_UP:
                         g_a = np.array([0, 0, scipy.constants.g]).reshape(3, 1)
                         b_a = self.static_initializer.get_accel_bias(C_ab_0, g_a)
                     else:
