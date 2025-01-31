@@ -1,30 +1,27 @@
-"""Auto-generated MQTT message class from TOML configuration config/bot_quickstart_msgs.toml at 2025-01-29 17:40:04.393277."""
+"""Auto-generated MQTT message class from TOML configuration config/bot_quickstart_msgs.toml at 2025-01-29 17:40:04.394001."""
 
 import json
 
 from lib.messages.mqtt_message_base import MqttMessageBase
 
 
-class OCCUPANCY_GRID_MSG(MqttMessageBase):
-    """MQTT message class for OCCUPANCY_GRID."""
+class PATH_PLAN_MSG(MqttMessageBase):
+    """MQTT message class for PATH_PLAN."""
 
     timestamp: float = None
-    width: int = None
-    flattened_grid_list: list = None
+    path_pose_list: list = None
 
-    def __init__(self, timestamp: float | None = None, width: int | None = None, flattened_grid_list: list | None = None):
+    def __init__(self, timestamp: float | None = None, path_pose_list: list | None = None):
         """Initialize the message class with given fields."""
         self.timestamp = timestamp
-        self.width = width
-        self.flattened_grid_list = flattened_grid_list
+        self.path_pose_list = path_pose_list
 
     def convert_to_payload(self) -> str:
         """Convert the message fields to a JSON payload."""
         try:
             data = {
                 'timestamp': self.timestamp,
-                'width': self.width,
-                'flattened_grid_list': self.flattened_grid_list,
+                'path_pose_list': self.path_pose_list,
             }
             return json.dumps(data)
         except (TypeError, ValueError) as e:
@@ -37,7 +34,6 @@ class OCCUPANCY_GRID_MSG(MqttMessageBase):
             if 'data' in data:
                 data = data['data']
             self.timestamp = data['timestamp']
-            self.width = data['width']
-            self.flattened_grid_list = data['flattened_grid_list']
+            self.path_pose_list = data['path_pose_list']
         except (json.JSONDecodeError, KeyError) as e:
             raise Exception(f'Error converting from payload: {e}') from e

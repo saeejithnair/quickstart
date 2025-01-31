@@ -38,7 +38,8 @@ dependencies = [
     "libtmux>=0.37.0",
     "RPi.GPIO>=0.7.1",
     "rpi-lgpio>=0.6",
-    "ruff>=0.7.1"
+    "ruff>=0.7.1",
+    "sshkeyboard>=2.3.1"
 ]
 
 # Add pyrealsense2 dependency based on platform
