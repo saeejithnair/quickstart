@@ -73,6 +73,10 @@ class LocalizationIMUEncoder:
         self.initialized = False
         self.loop_rate_hz = 200
 
+        # concurrent variables
+        self.omega_b_k = None
+        self.a_b_k = None
+
     def run(self):
         """
         Starts the main loop for processing input data and publishing results.
@@ -137,19 +141,23 @@ class LocalizationIMUEncoder:
             else:
                 try:
                     # TODO: figure this out, timing of imu_data is not consistent
-                    t_k, omega_b_k, a_b_k = self.imu_preprocessor.input_preprocess(imu_data)
+                    t_k, self.omega_b_k, self.a_b_k = self.imu_preprocessor.input_preprocess(imu_data)
                 except Exception as e:
                     print(e)
                     return
 
                 # Aggregate IMU object
-                imu_k = IMU(gyro=omega_b_k, accel=a_b_k, stamp=t_k)
+                imu_k = IMU(gyro=self.omega_b_k, accel=self.a_b_k, stamp=t_k)
 
                 # Propagate EKF state
                 self.ekf.predict(imu_k, t_k)
 
                 # Generate unbiased IMU message
+                # print("Biased gyroscope reading: ", omega_b_k)
                 omega_b_k_ub, a_b_k_ub = self.ekf.get_unbiased_imu(imu_k)
+                # print(hasattr(self.ekf.x_k, "bias_gyro"))
+                # print("Gyroscope bias value: ", self.ekf.x_k.state.bias_gyro)
+                # print("Unbiased gyroscope reading: ", omega_b_k_ub)
 
                 # Output processed IMU message
                 imu_msg = form_imu_message(t_k, omega_b_k_ub, a_b_k_ub)
@@ -170,7 +178,10 @@ class LocalizationIMUEncoder:
             v_r = encoder_data.right_vel_mps
 
             # Correct EKF state
-            self.ekf.correct(v_l, v_r)
+            if self.omega_b_k is not None and self.a_b_k is not None:
+                self.ekf.correct(t_k, v_l, v_r, self.omega_b_k, self.a_b_k)
+            else:
+                self.ekf.correct(t_k, v_l, v_r, None, None)
 
         # Publish messages if initialized
         if self.initialized and self.ekf.delta_t is not None:

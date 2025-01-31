@@ -8,6 +8,68 @@ from pymlg.numpy import SO3
 from pymlg.torch import SO3 as SO3t
 from scipy.interpolate import interp1d
 
+class EncoderVelocitySmoother:
+
+    def __init__(self, spline_samples: int, zero_vel_eps : float):
+        
+        # target sample count for smoothing
+        self.spline_samples = spline_samples
+
+        # unassigned spline for iterative smoothing of encoder velocities
+        self.encoder_velocity_spline = None
+
+        # individual wheel velocities so the eventual array shape will be (N, 2)
+        self.encoder_velocity_buff = []
+
+        # time buffer
+        self.t_k_buff = []
+
+        # threshold for zero-velocity identification
+        self.zero_vel_eps = zero_vel_eps
+
+    def has_enough_samples(self) -> bool:
+        """
+        Returns True if the buffer has enough samples to fit a spline
+        """
+        return len(self.encoder_velocity_buff) >= self.spline_samples
+
+    def fit_encoder_velocity_spline(self):
+        # Check if there are enough samples to fit splines
+        if len(self.t_k_buff) < self.spline_samples:
+            return
+
+        # aggregate buffers into np arrays for spline computation
+        stamps = np.array(self.t_k_buff)
+        encoder_velocity = np.array(self.encoder_velocity_buff).reshape(-1, 2)
+        
+        self.encoder_velocity_spline = csaps(stamps, encoder_velocity.T, smooth=.8)
+
+    def get_zero_velocity(self):
+        
+        # ensure that both elements of spline at present time are below zero-vel threshold. NOTE: this currently only performs a check on individual linear velocities, the angular velocity could still be near-zero for straight motion. But, we assume that vibrations and noise would make a correction in straight motion unhelpful.
+        if (len(self.t_k_buff) < self.spline_samples):
+            return False
+        
+        if (np.all(self.encoder_velocity_spline(self.t_k_buff[-1], 0) < self.zero_vel_eps)):
+            return True
+        else:
+            return False
+
+    def add_encoder_velocity_sample(self, encoder_velocity : np.ndarray, t_k : float):
+        """
+        Parameters
+        ----------
+        encoder_velocity : np.array with shape (1, 2)
+            Individual velocity entry from encoders
+        t_k : float
+            Time entry
+        """
+        self.encoder_velocity_buff.append(encoder_velocity.reshape(1, 2))
+        self.t_k_buff.append(t_k)
+
+        if (len(self.encoder_velocity_buff) > self.spline_samples):
+            self.encoder_velocity_buff.pop(0)
+            self.t_k_buff.pop(0)
 
 class IMUSmoother:
     """
@@ -38,9 +100,9 @@ class IMUSmoother:
         omega_b = np.array(self.omega_b_k_buff).reshape(-1, 3)
         a_b = np.array(self.a_b_k_buff).reshape(-1, 3)
         
-        self.angular_velocity_spline = csaps(stamps, omega_b.T, smooth=0.9999)
+        self.angular_velocity_spline = csaps(stamps, omega_b.T, smooth=0.6)
 
-        self.acceleration_spline = csaps(stamps, a_b.T, smooth=0.9999)
+        self.acceleration_spline = csaps(stamps, a_b.T, smooth=0.6)
 
     def add_sample(self, omega_b_k : np.ndarray, a_b_k : np.ndarray, t_k : float):
         """
@@ -91,7 +153,7 @@ class IMUSmoother:
 
         g_i_2 = g_i_2 / np.linalg.norm(g_i_2)
 
-        C_gi = np.vstack((g_i_1.T, g_i_2.T, g_i_3.T)).T
+        C_gi = np.vstack((g_i_1.T, g_i_2.T, g_i_3.T))
 
         return C_gi
 
@@ -107,7 +169,10 @@ class IMUSmoother:
         """
         # get mean angular velocity and acceleration at current time step
         
-        b_g = self.angular_velocity_spline(self.t_k_buff[-1], 0).T
+        # b_g = self.angular_velocity_spline(self.t_k_buff[-1], 0).T
+
+        # TODO: for now, just take average of values instead
+        b_g = np.mean(np.array(self.omega_b_k_buff), axis=0).reshape(3, 1)
 
         return b_g
     
@@ -186,7 +251,7 @@ class AngularAccelerationSmoother:
         stamps = np.array(self.t_k_buff)
         omega_b = np.array(self.omega_b_k_buff).reshape(-1, 3)
         
-        self.ang_vel_spline = csaps(stamps, omega_b.T, smooth=0.9999)
+        self.ang_vel_spline = csaps(stamps, omega_b.T, smooth=0.8)
 
     def add_omega_sample(self, omega_b_k : np.ndarray, t_k : float):
         """
