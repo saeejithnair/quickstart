@@ -18,7 +18,7 @@
   IDLE_BALANCE_DURATION_S = 1
 
 [RERUN]
-  HOST_IP_ADDRESS = "10.0.0.229"
+  HOST_IP_ADDRESS = "10.0.0.220"
 
 [LOCALIZATION]
   BASE_CONFIG_LOC = "quickstart/lib/localization/config/base_loc_conf.yaml"

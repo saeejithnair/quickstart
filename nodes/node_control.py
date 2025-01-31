@@ -194,15 +194,18 @@ class ControlNode(object):
                 elif target_velocity_msg is not None:
                     # use the velocity received on the topic
                     pass
-                else:
-                    target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
-                    target_velocity_msg.linear_velocity_mps = 0.0
-                    target_velocity_msg.angular_velocity_radps = 0.0
+                # else:
+                #     target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
+                #     target_velocity_msg.linear_velocity_mps = 0.0
+                #     target_velocity_msg.angular_velocity_radps = 0.0
 
                 if localization_initialized_msg is not None:
                     self.localization_initialized = localization_initialized_msg.initialized
 
                 if target_velocity_msg is not None:
+                    print("Target velocity recieved, setting targets.")
+                    print("Linear velocity target: ", target_velocity_msg.linear_velocity_mps)
+                    print("Angular velocity target: ", target_velocity_msg.angular_velocity_radps)
                     self.velocity_target = target_velocity_msg.linear_velocity_mps
                     self.yaw_rate_target = target_velocity_msg.angular_velocity_radps
 
