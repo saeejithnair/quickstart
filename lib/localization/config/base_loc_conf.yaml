@@ -1,5 +1,6 @@
 config_params:
   imu_config_loc: "quickstart/lib/localization/config/imu_params_conf.yaml"
+  perturbation: "left"
 
 physical_params:
   gravity_up: false
@@ -14,6 +15,12 @@ uncertainty_params:
   P_phi: 1e-4
   P_gyro_bias: 1e-6
   P_accel_bias: .5
+  R_zupt_ang: 0.01
+  R_zupt_vel: 0.1
+
+zupt_params:
+  spline_samples : 10
+  zupt_threshold: 0.01
 
 initialization_params:
-  static_init_period: 1.0
+  static_init_period: 2.0

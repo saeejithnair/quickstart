@@ -13,6 +13,8 @@ from pymlg.torch import SO3 as SO3t
 
 from lib.localization.modelling.wheel_encoder_mm import WheelEncoderGravityAligned
 
+from lib.localization.modelling.zupt_mm import ZuPT, ZuPTDetector
+
 
 class WheelEncoderEKF():
     """
@@ -39,12 +41,15 @@ class WheelEncoderEKF():
         R_enc_meas = self.loc_params['uncertainty_params']['R_enc']
         R_enc_pseudo = self.loc_params['uncertainty_params']['R_enc_pseudo']
 
+        # retrieve perturbation direction
+        self.perturbation = self.loc_params['config_params']['perturbation']
+
         # form measurement uncertainty matrix
         R_enc = np.eye(3)
         R_enc[0, :] *= R_enc_pseudo
         R_enc[1, :] *= R_enc_meas
         R_enc[2, :] *= R_enc_pseudo
-        self.encoder = WheelEncoderGravityAligned(R_enc)
+        self.encoder = WheelEncoderGravityAligned(R_enc, self.perturbation)
 
         sigma_gyro_ct = self.imu_config['imu_params']['sigma_gyro_ct']
         sigma_accel_ct = self.imu_config['imu_params']['sigma_accel_ct']
@@ -64,6 +69,12 @@ class WheelEncoderEKF():
             self.g_a = np.array([0, 0, scipy.constants.g]).reshape(3, 1)
         else:
             self.g_a = np.array([0, 0, -scipy.constants.g]).reshape(3, 1)
+
+        # define ZuPT measurement model
+        self.zupt = ZuPT(self.perturbation, self.loc_params['uncertainty_params']['R_zupt_ang'], self.loc_params['uncertainty_params']['R_zupt_vel'], self.g_a)
+
+        # define zero-velocity detector
+        self.zupt_detector = ZuPTDetector(self.loc_params)
 
         self.Q_imu = Q_c / self.delta_t
         self.ekf = ExtendedKalmanFilter(IMUKinematics(self.Q_imu, self.g_a))
@@ -90,7 +101,7 @@ class WheelEncoderEKF():
             a_b_ub : np.ndarray with shape (3, 1)
                 The unbiased acceleration measurement
         """
-        u_ub = get_unbiased_imu(self.x_k, u)
+        u_ub = get_unbiased_imu(self.x_k.state, u)
 
         # retrieve individual components
         omega_b_ub = u_ub.gyro.reshape(3, 1)
@@ -110,7 +121,7 @@ class WheelEncoderEKF():
         C_0 = SO3t.Exp(torch.Tensor(phi_0).reshape(-1, 3, 1)).numpy().reshape(3, 3)
         x_0 = SE23.from_components(C_0, v_a_0, r_a_0)
 
-        x_k_pose = IMUState(x_0, np.zeros((3, 1)), np.zeros((3, 1)), direction="left")
+        x_k_pose = IMUState(x_0, np.zeros((3, 1)), np.zeros((3, 1)), direction=self.perturbation)
 
         self.x_k = StateWithCovariance(x_k_pose, np.ones((15, 15)) * 1e-2)
 
@@ -131,7 +142,7 @@ class WheelEncoderEKF():
         v_a_0 = np.zeros((3, 1))
         x_0 = SE23.from_components(C_ab_0, v_a_0, r_a_0)
 
-        x_k_pose = IMUState(x_0, b_g, b_a, direction="left")
+        x_k_pose = IMUState(x_0, b_g, b_a, direction=self.perturbation)
 
         P_0 = np.eye(15)
 
@@ -201,7 +212,7 @@ class WheelEncoderEKF():
 
             self.t_k = t_k
 
-    def correct(self, v_l : float, v_r : float):
+    def correct(self, t_k : float, v_l : float, v_r : float, omega_b_k : np.array = None, a_b_k : np.array = None):
         """
         Correct the state estimate with a wheel encoder measurement
         """
@@ -212,3 +223,17 @@ class WheelEncoderEKF():
         enc_meas = Measurement(value = v_b_enc, model = self.encoder)
 
         self.x_k = self.ekf.correct(x=self.x_k, y=enc_meas, u=None)
+
+        # now, correct for zupt
+
+        if omega_b_k is not None and a_b_k is not None:
+            # stack the encoder velocity measurement into a (1, 2) array
+            encoder_data = np.array([v_l, v_r]).reshape(1, 2)
+
+            # check for zero-velocity, and if so, correct
+            if self.zupt_detector.detect(encoder_data, t_k):
+
+                # correct with gyroscope measurement and accelerometer measurement
+                zupt_meas = Measurement(value = np.vstack((omega_b_k, a_b_k)), model = self.zupt)
+
+                self.x_k = self.ekf.correct(x=self.x_k, y=zupt_meas, u=None)
