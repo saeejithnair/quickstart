@@ -78,11 +78,6 @@ class LookaheadController:
         # Extract the angular error from the relative rotation matrix
         error_angular = np.arctan2(R_relative[1, 0], R_relative[0, 0])
 
-        if error_angular > 0.5:
-            print("Current Pose: ", current_pose)
-            print("Goal Pose: ", goal_pose)
-            print(f"Error Angular: {error_angular}")
-
         return error_angular
     
     def vel_request(self, path_pose_list, current_pose):

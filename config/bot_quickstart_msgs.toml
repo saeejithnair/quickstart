@@ -123,3 +123,8 @@ occupancy_grid_max_x = ["float", "1"]
 occupancy_grid_min_y = ["float", "1"]
 occupancy_grid_max_y = ["float", "1"]
 topic_tof_map = "/mapping/tof_map"
+
+[WAVEMAP_OCCUPIED_POINTS]
+timestamp = ["float",'1']
+occupied_points = ["list", "1"]
+topic_wavemap_occupied_points = "/mapping/wavemap_occupied_points"

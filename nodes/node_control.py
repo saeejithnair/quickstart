@@ -7,7 +7,6 @@ import numpy as np
 
 import lib.constants as CFG
 from lib.control.motor_control import MotorControl
-from lib.planning.d_star import DStar
 from lib.planning.lookahead_controller import LookaheadController
 from lib.logging_utils import Logger
 from lib.messages.localization_initialized_msg import LOCALIZATION_INITIALIZED_MSG
@@ -23,9 +22,6 @@ from lib.messages.topic_to_message_type import (
     TOPIC_WHEEL_VELOCITIES,
     TOPIC_PATH_PLAN
 )
-
-# Set logging level for matplotlib to WARNING
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 class ControlNode(object):
@@ -46,17 +42,8 @@ class ControlNode(object):
         self.mqtt_publisher = MQTTPublisher(broker_address="localhost", topic_to_message_map={TOPIC_WHEEL_VELOCITIES: WHEEL_VELOCITIES_DATA_MSG})
 
         # Initialize message variables
-        self.traversability_grid = None
         self.robot_pose_msg = None
-        self.current_target_point_msg = None
-        self.target_point_msg = None
         self.path_plan_msg = None
-
-        self.dstar = DStar()  # Initialize D* pathfinding algorithm
-
-        # Extract grid parameters from configuration
-        self.grid_cell_size_m = CFG.MAPPING_GRID_GRID_CELL_SIZE
-        self.grid_width_m = CFG.MAPPING_GRID_DEFAULT_PLANAR_SPREAD
 
         self.loop_rate_hz = 300
 
@@ -162,7 +149,7 @@ class ControlNode(object):
             self.mqtt_publisher.stop()
 
 def generate_stopping_velocity_profile(target_velocity_msg: TARGET_VELOCITY_MSG, decel_time_s: float):
-    # Generate a velocity profile that decelerates to 0 in decel_time_s seconds
+    """Generate a velocity profile that decelerates to 0 in decel_time_s seconds."""
     linear_velocity_mps = target_velocity_msg.linear_velocity_mps
     angular_velocity_radps = target_velocity_msg.angular_velocity_radps
     time_to_stop = decel_time_s

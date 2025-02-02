@@ -16,6 +16,7 @@ from lib.messages.occupancy_grid_msg import OCCUPANCY_GRID_MSG
 from lib.messages.raw_imu_data_msg import RAW_IMU_DATA_MSG
 from lib.messages.tof_map_msg import TOF_MAP_MSG
 from lib.messages.wheel_velocities_data_msg import WHEEL_VELOCITIES_DATA_MSG
+from lib.messages.wavemap_occupied_points_msg import WAVEMAP_OCCUPIED_POINTS_MSG
 from lib.messages.mqtt_utils import MQTTSubscriber
 from lib.messages.topic_to_message_type import (
     TOPIC_EXTENDED_POSE_W_BIAS,
@@ -25,6 +26,7 @@ from lib.messages.topic_to_message_type import (
     TOPIC_RAW_IMU_UNSCALED_BIASED,
     TOPIC_WHEEL_VELOCITIES,
     TOPIC_TOF_MAP,
+    TOPIC_WAVEMAP_OCCUPIED_POINTS,
 )
 
 
@@ -32,7 +34,7 @@ class RerunViewer:
     def __init__(self, logging_level=logging.INFO):
         """
         Initialize the RerunViewer with logging and MQTT subscriber setup.
-        
+
         :param logging_level: The logging level to use for the logger.
         """
         self.logger = Logger('rerun_viewer', 'logs/rerun_viewer.log', level=logging_level)
@@ -40,7 +42,7 @@ class RerunViewer:
 
         self.last_periodic_log_time = time.time()
         self.last_delayed_log_time = time.time()
-        
+
         # Color Mapping Setup
         self.cmap = matplotlib.colormaps["coolwarm"]  # Use a colormap that transitions from blue to red
         self.norm = matplotlib.colors.Normalize(vmin=0.0, vmax=4.0)  # 0–4 meters color range
@@ -64,6 +66,7 @@ class RerunViewer:
                 TOPIC_WHEEL_VELOCITIES: WHEEL_VELOCITIES_DATA_MSG,
                 TOPIC_EXTENDED_POSE_W_BIAS: EXTENDED_POSE_W_BIAS_MSG,
                 TOPIC_PROCESSED_IMU: RAW_IMU_DATA_MSG,
+                TOPIC_WAVEMAP_OCCUPIED_POINTS: WAVEMAP_OCCUPIED_POINTS_MSG,
             }
         )
 
@@ -97,7 +100,7 @@ class RerunViewer:
     def process_input(self, event=None):
         """
         Process incoming MQTT messages and log data periodically.
-        
+
         :param event: Optional event parameter for future use.
         """
         # Retrieve latest messages from MQTT topics
@@ -108,6 +111,7 @@ class RerunViewer:
         self.processed_imu_data = self.mqtt_subscriber.get_latest_message(TOPIC_PROCESSED_IMU)
         self.occupancy_grid_data = self.mqtt_subscriber.get_latest_message(TOPIC_OCCUPANCY_GRID)
         self.tof_map_data = self.mqtt_subscriber.get_latest_message(TOPIC_TOF_MAP)
+        self.wavemap_occupied_points_data = self.mqtt_subscriber.get_latest_message(TOPIC_WAVEMAP_OCCUPIED_POINTS)
 
         current_time = time.time()
         # Log data every 0.1 seconds
@@ -138,12 +142,13 @@ class RerunViewer:
             self.log_occupancy_grid(self.occupancy_grid_data)
             self.log_tof_map(self.tof_map_data)
             self.log_odometry(self.extended_pose_data)
+            self.log_wavemap_occupied_points(self.wavemap_occupied_points_data)
             self.last_delayed_log_time = current_time
 
     def log_msg_values(self, id, MqttMessage: MqttMessageBase):
         """
         Log message values to Rerun, filtering out private and None attributes.
-        
+
         :param id: Identifier for the message type.
         :param MqttMessage: The message object containing data to log.
         """
@@ -160,18 +165,55 @@ class RerunViewer:
             # Convert the flattened list back to a 2D numpy array
             grid_array = np.array(occupancy_grid_data.flattened_grid_list).reshape((width, width))
 
+            occupied_indices = np.argwhere(grid_array == True)
+            if occupied_indices.size > 0:
+                # Convert grid indices to robot-local coordinates
+                # Grid indices: row (y), col (x)
+                local_x = occupied_indices[:, 1] * CFG.MAPPING_GRID_GRID_CELL_SIZE
+                local_y = occupied_indices[:, 0] * CFG.MAPPING_GRID_GRID_CELL_SIZE
+                local_z = np.full_like(local_x, 0.1)  # Points at 0.1m height
+
+                # Stack into Nx3 array
+                world_points = np.column_stack((local_x, local_y, local_z))
+
+                # # Transform points to world coordinates
+                # world_points = self.transform_robot_to_world(local_points, self.robot_pose)
+
+                colors = np.full((len(world_points), 4), [0.2, 0.2, 0.2, 1.0])  # Dark gray, fully opaque
+                radii = np.full(len(world_points), CFG.MAPPING_GRID_GRID_CELL_SIZE / 2)  # Half the cell size
+
+                # Log the occupancy grid in the 'world' frame
+                rr.log(
+                    "world/occupancy_grid",
+                    rr.Points3D(world_points, colors=colors, radii=radii),
+                    timeless=False,
+                )
+
             # Convert to a black and white image
             bw_image = (grid_array * 255).astype(np.uint8)
-
             # Log the image to Rerun
             rr.log("occupancy_grid", rr.Image(bw_image))
+
+    def log_wavemap_occupied_points(self, wavemap_occupied_points_data: WAVEMAP_OCCUPIED_POINTS_MSG):
+        if wavemap_occupied_points_data is not None:
+            points_np = np.array(wavemap_occupied_points_data.occupied_points)
+            d_m = np.linalg.norm(points_np, axis=1)  # distances in meters
+            colors = self.cmap(self.norm(d_m))
+            radii = np.full(points_np.shape[0], 0.05)
+
+            # Log the points relative to the 'robot' frame
+            rr.log(
+                "robot/wavemap_occupied_points",
+                rr.Points3D(points_np, colors=colors, radii=radii),
+                timeless=False,
+            )
 
     def log_tof_map(self, tof_map_data: TOF_MAP_MSG):
         if tof_map_data is not None:
             # Process each sensor's data
             for sensor_data in tof_map_data.sensors:
                 sensor_addr = sensor_data["sensor_address"]
-                
+
                 # Process valid points
                 valid_points = sensor_data["valid_points"]
                 if valid_points:
@@ -179,21 +221,21 @@ class RerunViewer:
                     d_m = np.linalg.norm(points_np, axis=1)  # distances in meters
                     colors = self.cmap(self.norm(d_m))
                     radii = np.full(points_np.shape[0], 0.05)
-                    
+
                     # Log the points relative to the 'robot' frame
                     rr.log(
                         f"robot/tof/sensor_{sensor_addr}/valid",
                         rr.Points3D(points_np, colors=colors, radii=radii),
                         timeless=False,
                     )
-                
+
                 # Process invalid points
                 invalid_points = sensor_data["invalid_points"]
                 if invalid_points:
                     points_np = np.array(invalid_points)
                     colors = np.full((points_np.shape[0], 4), [1.0, 1.0, 0.0, 0.5])  # Yellow, semi-transparent
                     radii = np.full(points_np.shape[0], 0.05)
-                    
+
                     # Log the points relative to the 'robot' frame
                     rr.log(
                         f"robot/tof/sensor_{sensor_addr}/invalid",
@@ -206,26 +248,26 @@ class RerunViewer:
             resolution = tof_map_data.occupancy_grid_resolution
             min_x = tof_map_data.occupancy_grid_min_x
             min_y = tof_map_data.occupancy_grid_min_y
-            
+
             # Create points for occupied cells (where grid == 0)
             occupied_indices = np.argwhere(grid == 0)
-            
+
             if occupied_indices.size > 0:
                 # Convert grid indices to robot-local coordinates
                 # Grid indices: row (y), col (x)
                 local_x = occupied_indices[:, 1] * resolution + min_x + (resolution / 2)
                 local_y = occupied_indices[:, 0] * resolution + min_y + (resolution / 2)
                 local_z = np.full_like(local_x, 0.1)  # Points at 0.1m height
-                
+
                 # Stack into Nx3 array
                 local_points = np.column_stack((local_x, local_y, local_z))
-                
+
                 # Transform points to world coordinates
                 world_points = self.transform_robot_to_world(local_points, self.robot_pose)
-                
+
                 colors = np.full((len(world_points), 4), [0.2, 0.2, 0.2, 1.0])  # Dark gray, fully opaque
                 radii = np.full(len(world_points), resolution / 2)  # Half the cell size
-                
+
                 # Log the occupancy grid in the 'world' frame
                 rr.log(
                     "world/occupancy_grid",
@@ -275,7 +317,7 @@ class RerunViewer:
                 ),
                 timeless=False,
             )
-            
+
             # Add capsule base
             rr.log(
                 "robot/geometry/base",
@@ -307,10 +349,10 @@ class RerunViewer:
     #     if robot_path:
     #         # Parse the path plan message
     #         path_xy = path_data["path_xy"]  # These are already in world coordinates
-            
+
     #         # Convert path to numpy array for visualization
     #         path_points = np.array([[x, y, 0.1] for x, y in path_xy])  # Set Z to 0.1m
-            
+
     #         # Log the path plan in the world frame (not robot frame)
     #         if len(path_points) > 1:
     #             rr.log(

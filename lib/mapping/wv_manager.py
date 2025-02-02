@@ -209,6 +209,17 @@ class DepthWavemapManager:
         """
         return self.occupancy_grid.traversability_grid.flatten()
 
+    def get_occupied_points(self):
+        """
+        Retrieve the occupied points.
+
+        Returns
+        -------
+        np.ndarray
+            Occupied points.
+        """
+        return self.occupancy_grid.occupied_points
+
     def threshold_map(self):
         """
         Threshold the map to restrict log-odds to a specific range, if specified.

@@ -1,4 +1,4 @@
-"""Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml at 2025-01-31 16:35:41.285643."""
+"""Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml at 2025-02-01 21:01:24.906337."""
 
 from lib.messages.extended_pose_w_bias_msg import EXTENDED_POSE_W_BIAS_MSG
 from lib.messages.gyro_data_msg import GYRO_DATA_MSG
@@ -12,6 +12,7 @@ from lib.messages.robot_pose_msg import ROBOT_POSE_MSG
 from lib.messages.target_point_msg import TARGET_POINT_MSG
 from lib.messages.target_velocity_msg import TARGET_VELOCITY_MSG
 from lib.messages.tof_map_msg import TOF_MAP_MSG
+from lib.messages.wavemap_occupied_points_msg import WAVEMAP_OCCUPIED_POINTS_MSG
 from lib.messages.wheel_velocities_data_msg import WHEEL_VELOCITIES_DATA_MSG
 
 # Topic variables
@@ -31,6 +32,7 @@ TOPIC_PATH_PLAN = '/planning/path_plan'
 TOPIC_TARGET_POINT = '/planning/target_point'
 TOPIC_TARGET_VELOCITY = '/control/target_velocity'
 TOPIC_TOF_MAP = '/mapping/tof_map'
+TOPIC_WAVEMAP_OCCUPIED_POINTS = '/mapping/wavemap_occupied_points'
 
 # Topic to message type mapping
 topic_to_message_type = {
@@ -50,4 +52,5 @@ topic_to_message_type = {
     '/planning/target_point': TARGET_POINT_MSG,
     '/control/target_velocity': TARGET_VELOCITY_MSG,
     '/mapping/tof_map': TOF_MAP_MSG,
+    '/mapping/wavemap_occupied_points': WAVEMAP_OCCUPIED_POINTS_MSG,
 }
