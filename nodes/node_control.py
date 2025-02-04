@@ -80,7 +80,7 @@ class ControlNode(object):
         replan_time = time.time()  # Initialize replan time
         # Initialize lookahead controller
         lookahead_controller = LookaheadController(lookahead_distance=0.25,
-                                                   max_linear_velocity=0.5,
+                                                   max_linear_velocity=0.25,
                                                    max_angular_velocity=1.0
                                                    )
         self.prev_goal_pose = None
@@ -159,8 +159,10 @@ class ControlNode(object):
                     if path:
                         # Convert path to world coordinates
                         self.path_pose_list = [convert_grid_coords_to_pose(path[i], self.grid_cell_size_m, self.grid_width_m) for i in range(len(path))]
-                        # Print every other point in the path
-                        print("Path found:", self.path_pose_list[0], self.path_pose_list[-1])
+                        # Print every point in the current path
+                        print("Path found:")
+                        for pose in self.path_pose_list:
+                            print(pose)
                         self.dstar.plot_path()
                     else:
                         self.path_pose_list = None
@@ -176,7 +178,7 @@ class ControlNode(object):
                     target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()
                     target_velocity_msg.linear_velocity_mps = linear_velocity
                     target_velocity_msg.angular_velocity_radps = angular_velocity
-                    print(f"Linear Velocity: {linear_velocity}, Angular Velocity: {angular_velocity}")
+                    # print(f"Linear Velocity: {linear_velocity}, Angular Velocity: {angular_velocity}")
                 elif target_velocity_msg is not None:
                     # use the velocity received on the topic
                     pass
@@ -242,7 +244,7 @@ def convert_grid_coords_to_pose(grid_coords, grid_cell_size_m: float, grid_width
         (x, y) in world coordinates.
     """
     offset = grid_width_m / 2
-    return (-(grid_coords[1] * grid_cell_size_m - offset), grid_coords[0] * grid_cell_size_m - offset)
+    return ((grid_coords[1] * grid_cell_size_m - offset), grid_coords[0] * grid_cell_size_m - offset)
 
 def process_traversability_grid(traversability_grid: OCCUPANCY_GRID_MSG):
     """

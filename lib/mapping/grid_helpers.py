@@ -141,7 +141,7 @@ class DynamicOccupancyGrid:
         self.traversability_grid = generate_traversability_grid(self.upper_body_occupancy_grid, self.lower_body_occupancy_grid, self.physical_body_rad_cell_width)
 
         # Flip the grids to match the coordinate frame
-        self.traversability_grid = self.traversability_grid[:, ::-1]
+        self.traversability_grid = self.traversability_grid[:, :]
         self.upper_body_occupancy_grid = self.upper_body_occupancy_grid[:, ::-1]
 
         # Convert the grid to a format suitable for OpenCV

@@ -209,14 +209,14 @@ class WheelEncoderEKF():
 
         # now, correct for zupt
 
-        if omega_b_k is not None and a_b_k is not None:
-            # stack the encoder velocity measurement into a (1, 2) array
-            encoder_data = np.array([v_l, v_r]).reshape(1, 2)
+        # if omega_b_k is not None and a_b_k is not None:
+        #     # stack the encoder velocity measurement into a (1, 2) array
+        #     encoder_data = np.array([v_l, v_r]).reshape(1, 2)
 
-            # check for zero-velocity, and if so, correct
-            if self.zupt_detector.detect(encoder_data, t_k):
+        #     # check for zero-velocity, and if so, correct
+        #     if self.zupt_detector.detect(encoder_data, t_k):
 
-                # correct with gyroscope measurement and accelerometer measurement
-                zupt_meas = Measurement(value = np.vstack((omega_b_k, a_b_k)), model = self.zupt)
+        #         # correct with gyroscope measurement and accelerometer measurement
+        #         zupt_meas = Measurement(value = np.vstack((omega_b_k, a_b_k)), model = self.zupt)
 
-                self.x_k = self.ekf.correct(x=self.x_k, y=zupt_meas, u=None)
+        #         self.x_k = self.ekf.correct(x=self.x_k, y=zupt_meas, u=None)

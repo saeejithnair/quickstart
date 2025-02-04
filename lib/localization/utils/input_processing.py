@@ -121,7 +121,7 @@ def form_robot_pose_message(msg: EXTENDED_POSE_W_BIAS_MSG) -> ROBOT_POSE_MSG:
     pose_msg.timestamp = msg.timestamp
     pose_msg.x_m = msg.r_a_b_x
     pose_msg.y_m = msg.r_a_b_y
-    pose_msg.theta_rad = -1 * msg.phi_a_b_z  # Convert orientation to robot pose format
+    pose_msg.theta_rad = msg.phi_a_b_z  # Convert orientation to robot pose format
     return pose_msg
 
 def form_robot_extended_pose_message(msg: EXTENDED_POSE_W_BIAS_MSG) -> ROBOT_EXTENDED_POSE_MSG:
@@ -192,12 +192,12 @@ def form_robot_pose_grid_coords_message(extended_pose_msg: EXTENDED_POSE_W_BIAS_
         int((extended_pose_msg.r_a_b_y + offset) / grid_cell_size_m)
     ])
 
-    grid_coords[0] = grid_width_m/grid_cell_size_m - grid_coords[0]
+    # grid_coords[0] = grid_width_m/grid_cell_size_m - grid_coords[0]
 
     # Initialize and populate the message
     msg = ROBOT_POSE_GRID_COORDS_MSG()
     msg.timestamp = extended_pose_msg.timestamp
     msg.x_grid = int(grid_coords[0])
     msg.y_grid = int(grid_coords[1])
-    msg.theta_rad = -1 * extended_pose_msg.phi_a_b_z  # Convert orientation to grid format
+    msg.theta_rad = extended_pose_msg.phi_a_b_z  # Convert orientation to grid format
     return msg
