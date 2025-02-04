@@ -5,18 +5,21 @@ from lib.localization.utils.input_processing import (
     form_flattened_occupancy_grid_message,
     form_robot_pose_grid_coords_message,
     form_se3_from_localization_message,
+    form_wavemap_occupied_points_message
 )
 from lib.mapping.wv_manager import DepthWavemapManager
 from lib.logging_utils import Logger
 from lib.messages.extended_pose_w_bias_msg import EXTENDED_POSE_W_BIAS_MSG
 from lib.messages.occupancy_grid_msg import OCCUPANCY_GRID_MSG
 from lib.messages.robot_pose_grid_coords_msg import ROBOT_POSE_GRID_COORDS_MSG
+from lib.messages.wavemap_occupied_points_msg import WAVEMAP_OCCUPIED_POINTS_MSG
 from lib.messages.mqtt_utils import MQTTPublisher, MQTTSubscriber
 from lib.messages.topic_to_message_type import (
     TOPIC_EXTENDED_POSE_W_BIAS,
     TOPIC_OCCUPANCY_GRID,
     TOPIC_ROBOT_POSE_GRID_COORDS,
     TOPIC_TRAVERSABILITY_GRID,
+    TOPIC_WAVEMAP_OCCUPIED_POINTS,
 )
 
 
@@ -24,7 +27,7 @@ class DepthWavemapNode:
     def __init__(self, logging_level=logging.INFO):
         """
         Initializes the DepthWavemapNode with logging, configuration, and MQTT setup.
-        
+
         :param logging_level: The logging level to use for the logger.
         """
         self.logger = Logger('depth_wavemap_node', 'logs/depth_wavemap_node.log', level=logging_level)
@@ -39,7 +42,8 @@ class DepthWavemapNode:
             topic_to_message_map={
                 TOPIC_OCCUPANCY_GRID: OCCUPANCY_GRID_MSG,
                 TOPIC_TRAVERSABILITY_GRID: OCCUPANCY_GRID_MSG,
-                TOPIC_ROBOT_POSE_GRID_COORDS: ROBOT_POSE_GRID_COORDS_MSG
+                TOPIC_ROBOT_POSE_GRID_COORDS: ROBOT_POSE_GRID_COORDS_MSG,
+                TOPIC_WAVEMAP_OCCUPIED_POINTS: WAVEMAP_OCCUPIED_POINTS_MSG
             }
         )
 
@@ -61,7 +65,7 @@ class DepthWavemapNode:
 
         # Start pipeline
         self.depth_wavemap_manager.start_pipeline()
-        
+
         try:
             while True:
                 start_time = time.time()
@@ -75,7 +79,7 @@ class DepthWavemapNode:
             self.depth_wavemap_manager.save_map()
             self.logger.info("Saved map!")
             self.mqtt_subscriber.stop()
-        
+
     def process_input(self):
         """
         Processes incoming messages, updates the depth wavemap, and publishes grid messages.
@@ -108,6 +112,13 @@ class DepthWavemapNode:
             )
             # Publish the traversability grid
             self.publisher.publish_msg(TOPIC_TRAVERSABILITY_GRID, traversability_grid_msg)
+
+            # Generate wavemap occupied points message and output
+            wavemap_occupied_points_msg = form_wavemap_occupied_points_message(
+                t_k,
+                self.depth_wavemap_manager.get_occupied_points()
+            )
+            self.publisher.publish_msg(TOPIC_WAVEMAP_OCCUPIED_POINTS, wavemap_occupied_points_msg)
 
             # Generate robot pose grid coords message and output
             robot_pose_grid_coords_msg = form_robot_pose_grid_coords_message(

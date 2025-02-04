@@ -7,6 +7,7 @@ from lib.messages.occupancy_grid_msg import OCCUPANCY_GRID_MSG
 from lib.messages.raw_imu_data_msg import RAW_IMU_DATA_MSG
 from lib.messages.robot_extended_pose_msg import ROBOT_EXTENDED_POSE_MSG
 from lib.messages.robot_pose_grid_coords_msg import ROBOT_POSE_GRID_COORDS_MSG
+from lib.messages.wavemap_occupied_points_msg import WAVEMAP_OCCUPIED_POINTS_MSG
 from lib.messages.robot_pose_msg import ROBOT_POSE_MSG
 
 
@@ -168,7 +169,24 @@ def form_flattened_occupancy_grid_message(t_k: float, flat_occupancy_grid: np.ar
     grid_msg.timestamp = t_k
     grid_msg.width = width
     grid_msg.flattened_grid_list = flat_occupancy_grid.tolist()
-    return grid_msg    
+    return grid_msg
+
+def form_wavemap_occupied_points_message(t_k: float, occupied_points: list) -> WAVEMAP_OCCUPIED_POINTS_MSG:
+    """
+    Forms a WAVEMAP_OCCUPIED_POINTS_MSG from an array of occupied points.
+
+    Args:
+        t_k (float): Timestamp of the occupied points.
+        occupied_points (np.array): The array of occupied points.
+
+    Returns
+    -------
+        WAVEMAP_OCCUPIED_POINTS_MSG: The populated wavemap occupied points message.
+    """
+    msg = WAVEMAP_OCCUPIED_POINTS_MSG()
+    msg.timestamp = t_k
+    msg.occupied_points = occupied_points
+    return msg
 
 def form_robot_pose_grid_coords_message(extended_pose_msg: EXTENDED_POSE_W_BIAS_MSG, grid_cell_size_m: float, grid_width_m: float) -> ROBOT_POSE_GRID_COORDS_MSG:
     """

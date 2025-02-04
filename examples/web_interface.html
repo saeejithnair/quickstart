@@ -47,15 +47,15 @@
     <div id="status">Disconnected</div>
     
     <div class="control-pad">
-        <button class="control-button" ontouchstart="sendVelocity(0.5, -1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(0.5, 0)" ontouchend="sendVelocity(0, 0)">^</button>
-        <button class="control-button" ontouchstart="sendVelocity(0.5, 1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(0, -1.0)" ontouchend="sendVelocity(0, 0)"><</button>
+        <button class="control-button" ontouchstart="sendVelocity(0.3, -1.3)" ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" ontouchstart="sendVelocity(0.3, 0)" ontouchend="sendVelocity(0, 0)">^</button>
+        <button class="control-button" ontouchstart="sendVelocity(0.3, 1.3)" ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" ontouchstart="sendVelocity(0, -1.3)" ontouchend="sendVelocity(0, 0)"><</button>
         <button class="control-button" ontouchstart="sendVelocity(0, 0)" ontouchend="sendVelocity(0, 0)">+</button>
-        <button class="control-button" ontouchstart="sendVelocity(0, 1.0)" ontouchend="sendVelocity(0, 0)">></button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, -1.0)" ontouchend="sendVelocity(0, 0)"> </button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, 0)" ontouchend="sendVelocity(0, 0)">v</button>
-        <button class="control-button" ontouchstart="sendVelocity(-0.5, 1.0)" ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" ontouchstart="sendVelocity(0, 1.3)" ontouchend="sendVelocity(0, 0)">></button>
+        <button class="control-button" ontouchstart="sendVelocity(-0.3, -1.3)" ontouchend="sendVelocity(0, 0)"> </button>
+        <button class="control-button" ontouchstart="sendVelocity(-0.3, 0)" ontouchend="sendVelocity(0, 0)">v</button>
+        <button class="control-button" ontouchstart="sendVelocity(-0.3, 1.3)" ontouchend="sendVelocity(0, 0)"> </button>
     </div>
 
     <div class="speech-box">
@@ -72,7 +72,7 @@
         const username = hostname.split('-')[0];    // e.g., "beige" or use full hostname if no hyphen
 
         // MQTT client setup - use the extracted username or full hostname
-        const mqttHost = username.includes('.') ? hostname : `${username}-desktop.local`;
+        const mqttHost = username.includes('.') ? hostname : `${username}-bracketbot.local`;
         console.log("MQTT host:", mqttHost);
         const client = mqtt.connect(`ws://${mqttHost}:9001`);
         
@@ -150,22 +150,22 @@
         function updateVelocity() {
             // Calculate linear velocity (forward/backward)
             let linear = 0;
-            if (keyState.ArrowUp) linear += 0.5;
-            if (keyState.ArrowDown) linear -= 0.5;
+            if (keyState.ArrowUp) linear += 0.2;
+            if (keyState.ArrowDown) linear -= 0.2;
 
             // Calculate angular velocity (rotation)
             let angular = 0;
-            if (keyState.ArrowLeft) angular -= 1.0;
-            if (keyState.ArrowRight) angular += 1.0;
+            if (keyState.ArrowLeft) angular += 1.3;
+            if (keyState.ArrowRight) angular -= 1.3;
 
             sendVelocity(linear, angular);
         }
 
         // Sending messages
         function sendVelocity(linear, angular) {
-            console.log("Sending velocity:", linear, angular);
+            console.log("Sending velocity:", Date.now(), linear, angular);
             const payload = JSON.stringify({
-                timestamp: 0.0,
+                timestamp: Date.now(),
                 linear_velocity_mps: linear,
                 angular_velocity_radps: angular
             });

@@ -74,6 +74,9 @@ class DynamicOccupancyGrid:
         self.upper_body_occupancy_grid = np.zeros((self.grid_length, self.grid_length), dtype=bool)
         self.traversability_grid = np.zeros((self.grid_length, self.grid_length), dtype=bool)
 
+        # Initialize occupied points
+        self.occupied_points = []
+
         # Initialize video writer
         self.video_writer = cv2.VideoWriter(
             'occupancy_grid.mp4',
@@ -149,6 +152,19 @@ class DynamicOccupancyGrid:
 
         # Write the frame to the video
         self.video_writer.write(grid_image)
+
+        # Identify occupied points in 3D space
+        self.occupied_points = []
+        for z in range(self.upper_body_grid_height):
+            for x in range(self.grid_length):
+                for y in range(self.grid_length):
+                    if upper_body_occupancy_values_raw[x, y, z] > CFG.MAPPING_GRID_PROBABILITY_THRESH:
+                        self.occupied_points.append((x * self.query_cell_width, y * self.query_cell_width, z * self.query_cell_width))
+        for z in range(self.lower_body_grid_height):
+            for x in range(self.grid_length):
+                for y in range(self.grid_length):
+                    if lower_body_occupancy_values_raw[x, y, z] > CFG.MAPPING_GRID_PROBABILITY_THRESH:
+                        self.occupied_points.append((x * self.query_cell_width, y * self.query_cell_width, z * self.query_cell_width))
 
     def __del__(self):
         """

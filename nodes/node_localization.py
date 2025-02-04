@@ -153,11 +153,7 @@ class LocalizationIMUEncoder:
                 self.ekf.predict(imu_k, t_k)
 
                 # Generate unbiased IMU message
-                # print("Biased gyroscope reading: ", omega_b_k)
                 omega_b_k_ub, a_b_k_ub = self.ekf.get_unbiased_imu(imu_k)
-                # print(hasattr(self.ekf.x_k, "bias_gyro"))
-                # print("Gyroscope bias value: ", self.ekf.x_k.state.bias_gyro)
-                # print("Unbiased gyroscope reading: ", omega_b_k_ub)
 
                 # Output processed IMU message
                 imu_msg = form_imu_message(t_k, omega_b_k_ub, a_b_k_ub)

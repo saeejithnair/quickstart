@@ -94,10 +94,10 @@ flattened_grid_list = ["list", "1"]
 topic_occupancy_grid = "/mapping/occupancy_grid"
 topic_traversability_grid = "/mapping/traversability_grid"
 
-[TRAJECTORY]
+[PATH_PLAN]
 timestamp = ["float",'1']
-trajectory = ["dict", "1"]
-topic_trajectory = "/planning/trajectory"
+path_pose_list = ["list", "1"]
+topic_path_plan = "/planning/path_plan"
 
 [TARGET_POINT]
 timestamp = ["float",'1']
@@ -110,3 +110,21 @@ timestamp = ["float",'1']
 linear_velocity_mps = ["float",'1']
 angular_velocity_radps = ["float",'1']
 topic_target_velocity = "/control/target_velocity"
+
+[TOF_MAP]
+timestamp = ["float",'1']
+sensors = ["list", "1"]
+occupancy_grid_data = ["list", "1"]
+occupancy_grid_height = ["int", "1"]
+occupancy_grid_width = ["int", "1"]
+occupancy_grid_resolution = ["float", "1"]
+occupancy_grid_min_x = ["float", "1"]
+occupancy_grid_max_x = ["float", "1"]
+occupancy_grid_min_y = ["float", "1"]
+occupancy_grid_max_y = ["float", "1"]
+topic_tof_map = "/mapping/tof_map"
+
+[WAVEMAP_OCCUPIED_POINTS]
+timestamp = ["float",'1']
+occupied_points = ["list", "1"]
+topic_wavemap_occupied_points = "/mapping/wavemap_occupied_points"

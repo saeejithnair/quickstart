@@ -123,6 +123,10 @@ class MotorControl:
                     print('Error checking motor errors:', e)
                     self.reset_and_initialize_motors()
                     return
+                
+            # Clip the desired velocity to the maximum speed
+            velocity_target_mps = max(min(velocity_target_mps, CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS), -CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS)
+            yaw_rate_target_rad_s = max(min(yaw_rate_target_rad_s, CFG.MOTOR_CONTROL_MAX_SPEED_ANGULAR_RADPS), -CFG.MOTOR_CONTROL_MAX_SPEED_ANGULAR_RADPS)
 
             # Calculate left and right wheel velocities
             wheel_base_width_m = CFG.ROBOT_WHEEL_DIST_M
@@ -158,9 +162,9 @@ class MotorControl:
         # Accelerate
         current_speed = 0.0
         start_time = time.time()
-        while current_speed < CFG.MOTOR_CONTROL_MAX_SPEED_MPS:
+        while current_speed < CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS:
             elapsed = time.time() - start_time
-            current_speed = min(0.15 * elapsed, CFG.MOTOR_CONTROL_MAX_SPEED_MPS)
+            current_speed = min(0.15 * elapsed, CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS)
             self.motor_controller.set_speed_mps_left(current_speed)
             self.motor_controller.set_speed_mps_right(current_speed)
             time.sleep(0.01)
@@ -171,7 +175,7 @@ class MotorControl:
             distance_remaining = (target_pos - current_pos) * CFG.ROBOT_WHEEL_RADIUS_M * 2
             
             if distance_remaining < 0.15:
-                current_speed = max(0.05, (distance_remaining / 0.15) * CFG.MOTOR_CONTROL_MAX_SPEED_MPS)
+                current_speed = max(0.05, (distance_remaining / 0.15) * CFG.MOTOR_CONTROL_MAX_SPEED_LINEAR_MPS)
                 self.motor_controller.set_speed_mps_left(current_speed)
                 self.motor_controller.set_speed_mps_right(current_speed)
                 

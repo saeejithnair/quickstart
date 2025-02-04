@@ -72,6 +72,8 @@ def create_dev_environment():
         middle_left_pane.send_keys('cd ~/quickstart && python3 nodes/node_localization.py')
         middle_right_pane.send_keys('cd ~/quickstart && python3 nodes/node_mapping.py')
         bottom_left_pane.send_keys('cd ~/quickstart && python3 nodes/node_rerun.py')
+        bottom_left_pane.send_keys('cd ~/quickstart && python3 nodes/node_drivepath.py')
+        bottom_right_pane.send_keys('cd ~/quickstart && python3 nodes/node_rerun.py')
         # bottom_right_pane.send_keys('cd ~/quickstart/examples && python3 -m http.server 8080')
 
         print(f"Tmux session '{SESSION_NAME}' created successfully!")
