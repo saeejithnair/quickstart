@@ -15,7 +15,7 @@ class LookaheadController:
     def __init__(self, lookahead_distance, max_linear_velocity, max_angular_velocity,
                  pid_type:PID_type = PID_type.PID,
                  pid_linear_kp=0.4, pid_linear_kv=0.0, pid_linear_ki=0.0,
-                 pid_angular_kp=1.2, pid_angular_kv=0.0, pid_angular_ki=0.0):
+                 pid_angular_kp=2, pid_angular_kv=0.0, pid_angular_ki=0.0):
         """
         Initialize the LookaheadController with given parameters.
 
@@ -39,6 +39,8 @@ class LookaheadController:
 
         # TODO: trying this:
         self.goal_idx = 0
+
+        self.prev_goal_pose = None
 
     @staticmethod
     def calculate_linear_error(current_pose, goal_pose):
@@ -104,8 +106,10 @@ class LookaheadController:
         error_linear = LookaheadController.calculate_linear_error(current_pose, finalGoal)
         error_angular = LookaheadController.calculate_angular_error(current_pose, goal)
 
-        print(f"Goal: {goal}, Current: {current_pose}")
-        print(f"Linear Err: {error_linear}, Angular Err: {error_angular}")
+        if self.prev_goal_pose is None or goal != self.prev_goal_pose:
+            print(f"Goal Pose: {goal}, Current Pose: {current_pose}")
+            self.prev_goal_pose = goal
+        # print(f"Linear Err: {error_linear}, Angular Err: {error_angular}")
 
         if abs(error_angular) > np.pi/2:
             linear_velocity = 0
@@ -129,10 +133,12 @@ class LookaheadController:
         """
         current_x, current_y, current_yaw = current_pose
 
-        # ensure contiguous tracking by making sure we don't go back to old targets
-        for idx, pose in enumerate(path_pose_list[self.goal_idx:]):
+        # ensure contiguous tracking by making sure we don't go back to old targets.
+        for idx, pose in enumerate(path_pose_list):
             distance = np.sqrt((pose[0] - current_x) ** 2 + (pose[1] - current_y) ** 2)
-            if distance >= self.lookahead_distance:
+            if (distance >= self.lookahead_distance) and (idx >= self.goal_idx):
                 self.goal_idx = idx
                 return pose
+            
+        print("No pose found within lookahead distance, so returning final goal!")
         return path_pose_list[-1]  # Return the last pose if no pose is found within the lookahead distance

@@ -61,9 +61,9 @@ class ControlNode(object):
         self.path_plan_msg = None
 
         # Initialize lookahead controller
-        lookahead_controller = LookaheadController(lookahead_distance=0.25,
+        lookahead_controller = LookaheadController(lookahead_distance=0.1,
                                                    max_linear_velocity=0.25,
-                                                   max_angular_velocity=1.0
+                                                   max_angular_velocity=1.5
                                                    )
         try:
             while True:
@@ -75,7 +75,20 @@ class ControlNode(object):
                 # Update path plan message
                 path_plan_msg: PATH_PLAN_MSG = self.mqtt_subscriber.get_latest_message(TOPIC_PATH_PLAN)
                 if path_plan_msg is not None:
-                    self.path_plan_msg = path_plan_msg
+
+                    # if plan not yet assigned, assign it
+                    if self.path_plan_msg is None:
+                        self.path_plan_msg = path_plan_msg
+                    
+                    # check if new plan is identical to old plan
+                    elif path_plan_msg.path_pose_list != self.path_plan_msg.path_pose_list:
+                        # everytime path plan is updated, reset the goal_idx
+                        print("Resetting goal_idx to 0 as we recieved a new plan.")
+                        lookahead_controller.goal_idx = 0
+
+                        # assign new plan
+                        self.path_plan_msg = path_plan_msg
+
 
                 # Check if path plan message is too old
                 if self.path_plan_msg is not None and time.time() - self.path_plan_msg.timestamp > 5.0:
@@ -88,33 +101,6 @@ class ControlNode(object):
                     world_x_pos = self.robot_pose_msg.x_m
                     world_y_pos = self.robot_pose_msg.y_m
                     world_yaw = self.robot_pose_msg.theta_rad
-
-                # Check if it's time to replan
-                # if time.time() - replan_time > 5.0 and self.target_point_msg is not None and self.traversability_grid is not None and self.robot_pose_grid_coords_msg is not None and self.robot_pose_msg is not None:
-
-                #     print(f"Attempting to plan from ({grid_start_pose_x}, {grid_start_pose_y}) to ({grid_goal_pose_x}, {grid_goal_pose_y})")
-
-                #     # Initialize D* algorithm and run pathfinding
-                #     self.dstar.initialize(traversability_grid, (grid_start_pose_y, grid_start_pose_x), (grid_goal_pose_y, grid_goal_pose_x))
-                #     path = self.dstar.run()
-
-                #     if path:
-                #         # Convert path to world coordinates
-                #         self.path_pose_list = [convert_grid_coords_to_pose(path[i], self.grid_cell_size_m, self.grid_width_m) for i in range(len(path))]
-                #         # Print every point in the current path
-                #         print("Path found:")
-                #         for pose in self.path_pose_list:
-                #             print(pose)
-                #         self.dstar.plot_path()
-                #     else:
-                #         self.path_pose_list = None
-                #         self.dstar.plot_path()
-                #         print("No path found")
-                #         continue
-
-                #     replan_time = time.time()
-
-                if self.path_pose_list is not None:
                     # Trajectory planning
                     linear_velocity, angular_velocity = lookahead_controller.vel_request(self.path_plan_msg.path_pose_list, (world_x_pos, world_y_pos, world_yaw))
                     target_velocity_msg: TARGET_VELOCITY_MSG = TARGET_VELOCITY_MSG()

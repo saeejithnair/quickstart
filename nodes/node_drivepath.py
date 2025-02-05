@@ -114,8 +114,10 @@ class DrivePathNode(object):
                     if path:
                         # Convert path to world coordinates
                         self.path_pose_list = [convert_grid_coords_to_pose(path[i], self.grid_cell_size_m, self.grid_width_m) for i in range(len(path))]
-                        # Print every other point in the path
-                        print("Path found:", self.path_pose_list[0], self.path_pose_list[-1])
+
+                        print("Path found:")
+                        for i in range(0, len(self.path_pose_list)):
+                            print(f"Pose {i}: {self.path_pose_list[i]}")
                         # self.dstar.plot_path()
                     else:
                         self.path_pose_list = None
@@ -162,7 +164,7 @@ def convert_grid_coords_to_pose(grid_coords, grid_cell_size_m: float, grid_width
         (x, y) in world coordinates.
     """
     offset = grid_width_m / 2
-    return (-(grid_coords[1] * grid_cell_size_m - offset), grid_coords[0] * grid_cell_size_m - offset)
+    return ((grid_coords[1] * grid_cell_size_m - offset), grid_coords[0] * grid_cell_size_m - offset)
 
 def process_traversability_grid_msg(traversability_grid_msg: OCCUPANCY_GRID_MSG):
     """
