@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import pywavemap as wave
+from pywavemap import InterpolationMode
 from scipy.ndimage import binary_dilation
 
 import lib.constants as CFG
@@ -78,13 +79,13 @@ class DynamicOccupancyGrid:
         self.occupied_points = []
 
         # Initialize video writer
-        self.video_writer = cv2.VideoWriter(
-            'occupancy_grid.mp4',
-            cv2.VideoWriter_fourcc(*'mp4v'),
-            10,  # frames per second
-            (self.grid_length, self.grid_length),  # frame size
-            isColor=False  # grayscale
-        )
+        # self.video_writer = cv2.VideoWriter(
+        #     'occupancy_grid.mp4',
+        #     cv2.VideoWriter_fourcc(*'mp4v'),
+        #     10,  # frames per second
+        #     (self.grid_length, self.grid_length),  # frame size
+        #     isColor=False  # grayscale
+        # )
 
     def reset_occupancy_grid(self):
         """
@@ -145,32 +146,59 @@ class DynamicOccupancyGrid:
 
         # Flip the grids to match the coordinate frame
         self.traversability_grid = self.traversability_grid[:, :]
-        self.upper_body_occupancy_grid = self.upper_body_occupancy_grid[:, ::-1]
+        self.upper_body_occupancy_grid = self.upper_body_occupancy_grid[:, :]
 
         # Convert the grid to a format suitable for OpenCV
         grid_image = (self.traversability_grid * 255).astype(np.uint8)
 
         # Write the frame to the video
-        self.video_writer.write(grid_image)
+        # self.video_writer.write(grid_image)
 
+    def update_occupied_points(self, map: wave.Map):
+        """
+        Update occupied points with new wavemap.
+
+        Args:
+            map (wave.Map): Wavemap object to query.
+        """
         # Identify occupied points in 3D space
         self.occupied_points = []
-        for z in range(self.upper_body_grid_height):
-            for x in range(self.grid_length):
-                for y in range(self.grid_length):
-                    if upper_body_occupancy_values_raw[x, y, z] > CFG.MAPPING_GRID_PROBABILITY_THRESH:
-                        self.occupied_points.append((x * self.query_cell_width, y * self.query_cell_width, z * self.query_cell_width))
-        for z in range(self.lower_body_grid_height):
-            for x in range(self.grid_length):
-                for y in range(self.grid_length):
-                    if lower_body_occupancy_values_raw[x, y, z] > CFG.MAPPING_GRID_PROBABILITY_THRESH:
-                        self.occupied_points.append((x * self.query_cell_width, y * self.query_cell_width, z * self.query_cell_width))
+
+        # Generate z range
+        z_range = np.arange(0.1, 6.0, self.query_cell_width*2)
+
+        # Retrieve positions corresponding to a certain planar spread
+        steps = np.round(self.planar_spread)
+        # Generate x and y values
+        x = np.arange(-steps / 2, steps / 2, self.query_cell_width*3)
+        y = np.arange(-steps / 2, steps / 2, self.query_cell_width*3)
+
+        # Generate 3D meshgrid
+        node_idx_mgrid = np.array(np.meshgrid(x, y, z_range))
+        node_idx_mgrid = node_idx_mgrid.T.reshape(-1, 3)
+        points_log_odds = map.interpolate(node_idx_mgrid, InterpolationMode.NEAREST)
+
+        # Convert log odds to probability
+        points_prob = np.exp(points_log_odds) / (1 + np.exp(points_log_odds))
+        
+        # Define a threshold for occupied points
+        threshold = 0.75 # CFG.MAPPING_GRID_PROBABILITY_THRESH
+
+        # Find indices where probability is greater than the threshold
+        occupied_indices = np.argwhere(points_prob > threshold).flatten()
+        
+        # Add these points to the occupied points list
+        occupied_points = node_idx_mgrid[occupied_indices]
+
+        # Extend the occupied_points list with the new points
+        self.occupied_points = occupied_points.tolist()
 
     def __del__(self):
         """
         Destructor to release the video writer when the class is destroyed.
         """
-        self.video_writer.release()
+        pass
+        # self.video_writer.release()
 
 def generate_traversability_grid(upper_body_occupancy: np.array, lower_body_occupancy: np.array, physical_body_rad: float) -> np.array:
     """

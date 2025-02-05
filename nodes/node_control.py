@@ -61,8 +61,8 @@ class ControlNode(object):
         self.path_plan_msg = None
 
         # Initialize lookahead controller
-        lookahead_controller = LookaheadController(lookahead_distance=0.1,
-                                                   max_linear_velocity=0.25,
+        lookahead_controller = LookaheadController(lookahead_distance=0.15,
+                                                   max_linear_velocity=0.40,
                                                    max_angular_velocity=1.5
                                                    )
         try:

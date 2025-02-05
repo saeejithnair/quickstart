@@ -53,7 +53,7 @@ def main(toml_path, py_path):
     py_file_path = py_file_path.as_posix()
     # Start writing Python file
     with open(py_file_path, 'w') as py_file:
-        file_header_msg = f"Auto-generated constants from TOML configuration {toml_path} at {datetime.now()}"
+        file_header_msg = f"Auto-generated constants from TOML configuration {toml_path}."
         py_file.write('"""' + file_header_msg + '"""' + '\n\n')
 
         # Write initial Python import statements

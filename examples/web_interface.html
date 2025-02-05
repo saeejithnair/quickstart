@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
+        /* Add this to make the page non-scrollable */
+        html, body {
+            overflow: hidden;
+        }
         .control-pad {
             display: grid;
             grid-template-columns: repeat(3, 80px);
@@ -103,17 +107,19 @@
         let lastUpdateTime = 0;
         const updateInterval = 5000; // 5 seconds in milliseconds
 
+        let lastRobotPose = null; // Initialize a variable to store the robot pose
+
         client.on('message', function (topic, message) {
             if (topic === '/mapping/traversability_grid') {
                 console.log("Message received:", topic);
                 const currentTime = Date.now();
                 if (currentTime - lastUpdateTime >= updateInterval) {
-                    displayGrid(message);
+                    const gridData = JSON.parse(message.toString());
+                    displayGrid(gridData, lastRobotPose); // Pass the last known robot pose
                     lastUpdateTime = currentTime;
                 }
             } else if (topic === '/mapping/robot_pose_grid_coords') {
-                const poseData = JSON.parse(message.toString());
-                displayRobotPose(poseData);
+                lastRobotPose = JSON.parse(message.toString()); // Save the robot pose
             }
         });
 
@@ -150,8 +156,8 @@
         function updateVelocity() {
             // Calculate linear velocity (forward/backward)
             let linear = 0;
-            if (keyState.ArrowUp) linear += 0.2;
-            if (keyState.ArrowDown) linear -= 0.2;
+            if (keyState.ArrowUp) linear += 0.3;
+            if (keyState.ArrowDown) linear -= 0.3;
 
             // Calculate angular velocity (rotation)
             let angular = 0;
@@ -178,61 +184,45 @@
             document.getElementById('speechText').value = '';
         }
 
-        function displayGrid(message) {
-            const data = JSON.parse(message.toString());
+        function displayGrid(data, robotPose) {
             const flattenedGridList = data.flattened_grid_list;
             const width = data.width;
 
             const gridContainer = document.getElementById('grid-container');
-            gridContainer.innerHTML = ''; // Clear previous grid
-            gridContainer.style.position = 'relative';
+            gridContainer.style.position = 'relative'; // Ensure the grid container is positioned relative
 
             const table = document.createElement('table');
             table.style.borderCollapse = 'collapse';
-            table.style.zIndex = '1';
+            table.classList.add('grid-table');
 
-            for (let i = 0; i < width - 10; i += 10) {
+            for (let i = width - 10; i >= 0; i -= 10) {
                 const row = document.createElement('tr');
-                for (let j = 0; j < width - 10; j += 10) {
+                for (let j = 0; j < width; j += 10) {
                     const cell = document.createElement('td');
                     const value = flattenedGridList[i * width + j];
                     cell.style.width = '20px';
                     cell.style.height = '20px';
                     cell.style.border = '1px solid black';
                     cell.style.backgroundColor = value ? 'black' : 'white'; // Example color mapping
+
+                    // Check if this cell is closest to the robot pose
+                    if (robotPose && Math.abs(i - robotPose.y_grid) < 5 && Math.abs(j - robotPose.x_grid) < 5) {
+                        cell.style.backgroundColor = 'red'; // Set the robot's position to red
+                    }
+
                     cell.style.zIndex = '1'; // Ensure grid cells have a lower z-index
                     row.appendChild(cell);
                 }
                 table.appendChild(row);
             }
 
-            gridContainer.appendChild(table);
-        }
-
-        // Function to display the robot's position and heading on the grid
-        function displayRobotPose(poseData) {
-            const { x_grid, y_grid, theta_rad } = poseData;
-            const gridContainer = document.getElementById('grid-container');
-            gridContainer.style.position = 'relative'; // Ensure the grid container is positioned relative
-
-            const robotElement = document.createElement('div');
-            robotElement.style.position = 'absolute';
-            robotElement.style.width = '20px';
-            robotElement.style.height = '20px';
-            robotElement.style.backgroundColor = 'red';
-            robotElement.style.transform = `rotate(${theta_rad}rad)`;
-            robotElement.style.left = `${x_grid * 20}px`;
-            robotElement.style.top = `${y_grid * 20}px`;
-            robotElement.style.zIndex = '100'; // Ensure the robot is on top
-
-            // Remove any existing robot element before adding a new one
-            const existingRobot = gridContainer.querySelector('.robot');
-            if (existingRobot) {
-                gridContainer.removeChild(existingRobot);
+            // Remove any existing table element before adding a new one
+            const existingTable = gridContainer.querySelector('.grid-table');
+            if (existingTable) {
+                gridContainer.removeChild(existingTable);
             }
 
-            robotElement.classList.add('robot');
-            gridContainer.appendChild(robotElement);
+            gridContainer.appendChild(table);
         }
     </script>
 </body>

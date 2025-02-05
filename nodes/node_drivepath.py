@@ -91,7 +91,7 @@ class DrivePathNode(object):
 
                     # If within tolerance of the target point, don't replan
                     if grid_start_pose_x is not None and grid_start_pose_y is not None:
-                        if np.linalg.norm([grid_start_pose_x - grid_goal_pose_x, grid_start_pose_y - grid_goal_pose_y]) < 3:
+                        if np.linalg.norm([grid_start_pose_x - grid_goal_pose_x, grid_start_pose_y - grid_goal_pose_y]) < 1.5:
                             self.target_point_msg = None
                             self.path_pose_list = None
                             self.traversability_grid_msg = None

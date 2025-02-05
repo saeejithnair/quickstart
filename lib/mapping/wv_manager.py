@@ -64,6 +64,8 @@ class DepthWavemapManager:
             }
         })
 
+        self.last_occupied_points_update_time = time.time()
+
     def start_pipeline(self):
         """
         Start the RealSense pipeline and add a measurement integrator to the pipeline.
@@ -142,6 +144,11 @@ class DepthWavemapManager:
 
         # After integrating, update occupancy grid
         self.occupancy_grid.update_occupancy_grid(self.local_submap)
+
+        # Update occupied points
+        if time.time() - self.last_occupied_points_update_time > 5.0:
+            self.occupancy_grid.update_occupied_points(self.local_submap)
+            self.last_occupied_points_update_time = time.time()
 
     def get_upper_body_occupancy_grid(self):
         """

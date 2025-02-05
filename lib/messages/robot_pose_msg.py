@@ -1,4 +1,4 @@
-"""Auto-generated MQTT message class from TOML configuration config/bot_quickstart_msgs.toml at 2025-02-01 21:01:24.899280."""
+"""Auto-generated MQTT message class from TOML configuration config/bot_quickstart_msgs.toml."""
 
 import json
 

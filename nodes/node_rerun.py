@@ -17,6 +17,7 @@ from lib.messages.raw_imu_data_msg import RAW_IMU_DATA_MSG
 from lib.messages.tof_map_msg import TOF_MAP_MSG
 from lib.messages.wheel_velocities_data_msg import WHEEL_VELOCITIES_DATA_MSG
 from lib.messages.wavemap_occupied_points_msg import WAVEMAP_OCCUPIED_POINTS_MSG
+from lib.messages.path_plan_msg import PATH_PLAN_MSG
 from lib.messages.mqtt_utils import MQTTSubscriber
 from lib.messages.topic_to_message_type import (
     TOPIC_EXTENDED_POSE_W_BIAS,
@@ -27,6 +28,7 @@ from lib.messages.topic_to_message_type import (
     TOPIC_WHEEL_VELOCITIES,
     TOPIC_TOF_MAP,
     TOPIC_WAVEMAP_OCCUPIED_POINTS,
+    TOPIC_PATH_PLAN
 )
 
 
@@ -48,8 +50,7 @@ class RerunViewer:
         self.norm = matplotlib.colors.Normalize(vmin=0.0, vmax=4.0)  # 0–4 meters color range
 
         # Robot Box
-        self.robot_half_size = np.array([[0.02, 0.02, 0.7]])   # half extents in x,y,z
-        self.robot_color     = np.array([[1.0, 0.0, 0.0, 0.4]])# RGBA: red, semi-transparent
+        self.robot_color = np.array([[1.0, 0.0, 0.0, 0.4]])# RGBA: red, semi-transparent
 
         # Robot Path
         # -----------------------------------------------------------------------------
@@ -67,6 +68,7 @@ class RerunViewer:
                 TOPIC_EXTENDED_POSE_W_BIAS: EXTENDED_POSE_W_BIAS_MSG,
                 TOPIC_PROCESSED_IMU: RAW_IMU_DATA_MSG,
                 TOPIC_WAVEMAP_OCCUPIED_POINTS: WAVEMAP_OCCUPIED_POINTS_MSG,
+                TOPIC_PATH_PLAN: PATH_PLAN_MSG,
             }
         )
 
@@ -112,6 +114,7 @@ class RerunViewer:
         self.occupancy_grid_data = self.mqtt_subscriber.get_latest_message(TOPIC_OCCUPANCY_GRID)
         self.tof_map_data = self.mqtt_subscriber.get_latest_message(TOPIC_TOF_MAP)
         self.wavemap_occupied_points_data = self.mqtt_subscriber.get_latest_message(TOPIC_WAVEMAP_OCCUPIED_POINTS)
+        self.path_plan_data = self.mqtt_subscriber.get_latest_message(TOPIC_PATH_PLAN)
 
         current_time = time.time()
         # Log data every 0.1 seconds
@@ -143,6 +146,7 @@ class RerunViewer:
             self.log_tof_map(self.tof_map_data)
             self.log_odometry(self.extended_pose_data)
             self.log_wavemap_occupied_points(self.wavemap_occupied_points_data)
+            self.log_path_plan(self.path_plan_data)
             self.last_delayed_log_time = current_time
 
     def log_msg_values(self, id, MqttMessage: MqttMessageBase):
@@ -157,13 +161,19 @@ class RerunViewer:
                 rr.log("{}/{}".format(id, name), rr.Scalar(val))
 
     def log_occupancy_grid(self, occupancy_grid_data: OCCUPANCY_GRID_MSG):
-        """Custom handling of logging occupancy grid data to Rerun."""
+        """
+        Log the occupancy grid data to Rerun.
+
+        :param occupancy_grid_data: The occupancy grid data to log.
+        """
         if occupancy_grid_data is not None:
             # Assuming you know the width and height of the grid
             width = occupancy_grid_data.width
 
             # Convert the flattened list back to a 2D numpy array
             grid_array = np.array(occupancy_grid_data.flattened_grid_list).reshape((width, width))
+            # flip along second axis
+            # grid_array = grid_array[:, ::-1]
 
             occupied_indices = np.argwhere(grid_array == True)
             if occupied_indices.size > 0:
@@ -174,10 +184,10 @@ class RerunViewer:
                 local_z = np.full_like(local_x, 0.1)  # Points at 0.1m height
 
                 # Stack into Nx3 array
-                world_points = np.column_stack((local_x, local_y, local_z))
+                local_points = np.column_stack((local_x, local_y, local_z))
 
                 # # Transform points to world coordinates
-                # world_points = self.transform_robot_to_world(local_points, self.robot_pose)
+                world_points = local_points - np.array([10, 10, 0])
 
                 colors = np.full((len(world_points), 4), [0.2, 0.2, 0.2, 1.0])  # Dark gray, fully opaque
                 radii = np.full(len(world_points), CFG.MAPPING_GRID_GRID_CELL_SIZE / 2)  # Half the cell size
@@ -186,29 +196,35 @@ class RerunViewer:
                 rr.log(
                     "world/occupancy_grid",
                     rr.Points3D(world_points, colors=colors, radii=radii),
-                    timeless=False,
+                    timeless=True,
                 )
 
-            # Convert to a black and white image
-            bw_image = (grid_array * 255).astype(np.uint8)
-            # Log the image to Rerun
-            rr.log("occupancy_grid", rr.Image(bw_image))
-
     def log_wavemap_occupied_points(self, wavemap_occupied_points_data: WAVEMAP_OCCUPIED_POINTS_MSG):
-        if wavemap_occupied_points_data is not None:
-            points_np = np.array(wavemap_occupied_points_data.occupied_points)
-            d_m = np.linalg.norm(points_np, axis=1)  # distances in meters
-            colors = self.cmap(self.norm(d_m))
-            radii = np.full(points_np.shape[0], 0.05)
+        """
+        Log the wavemap occupied points to Rerun.
 
-            # Log the points relative to the 'robot' frame
-            rr.log(
-                "robot/wavemap_occupied_points",
-                rr.Points3D(points_np, colors=colors, radii=radii),
-                timeless=False,
-            )
+        :param wavemap_occupied_points_data: The wavemap occupied points data to log.
+        """
+        if wavemap_occupied_points_data is not None:
+            world_points = np.array(wavemap_occupied_points_data.occupied_points)
+            if len(world_points) > 0:
+                d_m = np.linalg.norm(world_points, axis=1)  # distances in meters
+                colors = self.cmap(self.norm(d_m))
+                radii = np.full(world_points.shape[0], 0.05)
+
+                # Log the points in inertial fixed frame
+                rr.log(
+                    "world/wavemap_occupied_points",
+                    rr.Points3D(world_points, colors=colors, radii=radii),
+                    timeless=True,
+                )
 
     def log_tof_map(self, tof_map_data: TOF_MAP_MSG):
+        """
+        Log the TOF map data to Rerun.
+
+        :param tof_map_data: The TOF map data to log.
+        """
         if tof_map_data is not None:
             # Process each sensor's data
             for sensor_data in tof_map_data.sensors:
@@ -276,6 +292,11 @@ class RerunViewer:
                 )
 
     def log_odometry(self, pose_msg: EXTENDED_POSE_W_BIAS_MSG):
+        """
+        Log the odometry data to Rerun.
+
+        :param pose_msg: The odometry data to log.
+        """
         if pose_msg is not None:
             self.robot_pose = {
                 'x': pose_msg.r_a_b_x,
@@ -283,36 +304,37 @@ class RerunViewer:
                 'theta': pose_msg.phi_a_b_z
             }
 
-            rr.log("pose", rr.TextLog(
-                f"X: {pose_msg.r_a_b_x:.2f}m\n"
-                f"Y: {pose_msg.r_a_b_y:.2f}m\n"
+            rr.log("world_pose", rr.TextLog(
+                f"X: {self.robot_pose['x']:.2f}m\n"
+                f"Y: {self.robot_pose['y']:.2f}m\n"
             ))
-            rr.log("world_pose", rr.Points2D([pose_msg.r_a_b_x, pose_msg.r_a_b_y]))
+            rr.log("world_pose", rr.Points2D([self.robot_pose['x'], self.robot_pose['y']]))
 
             # Update the robot's transform in Rerun
             sin_theta_half = math.sin(self.robot_pose['theta'] / 2.0)
             cos_theta_half = math.cos(self.robot_pose['theta'] / 2.0)
             quat = rr.Quaternion(xyzw=[0.0, 0.0, sin_theta_half, cos_theta_half])
 
-            # Log the transform from 'world' to 'robot'
+            # Log the transform of robot's center
             rr.log(
                 "robot",
                 rr.Transform3D(
-                    translation=[self.robot_pose['x'], self.robot_pose['y'], 0.0],
+                    translation=[self.robot_pose['x'], self.robot_pose['y'], 0.1],
                     rotation=quat,
                 ),
                 timeless=False,
             )
 
             # Log the robot's visualization (optional)
-            robot_center = np.array([[0.0, 0.0, 0.7]])  # Robot is at the origin of its own frame
+            robot_half_size = np.array([[0.02, 0.02, 0.7]])   # half extents in x,y,z
+            robot_extrusion_center = np.array([[0.0, 0.0, 0.7]])  # Robot is at the origin of its own frame
 
             # Log the box shape
             rr.log(
                 "robot/geometry/extrusion",
                 rr.Boxes3D(
-                    centers=robot_center,
-                    half_sizes=self.robot_half_size,
+                    centers=robot_extrusion_center,
+                    half_sizes=robot_half_size,
                     colors=self.robot_color
                 ),
                 timeless=False,
@@ -328,7 +350,6 @@ class RerunViewer:
                 ),
                 timeless=False,
             )
-            print(f"Updated robot position: x={self.robot_pose['x']:.2f}, y={self.robot_pose['y']:.2f}, theta={self.robot_pose['theta']:.2f}")
 
             # Append the current position to the robot path (in world frame)
             self.robot_path.append([self.robot_pose['x'], self.robot_pose['y'], 0.05])  # Z-coordinate is consistent with robot_center
@@ -345,26 +366,30 @@ class RerunViewer:
                     timeless=False,
                 )
 
-    # def log_robot_path(self, robot_path: list):
-    #     if robot_path:
-    #         # Parse the path plan message
-    #         path_xy = path_data["path_xy"]  # These are already in world coordinates
+    def log_path_plan(self, path_plan_data: PATH_PLAN_MSG):
+        """
+        Log the path plan to Rerun.
 
-    #         # Convert path to numpy array for visualization
-    #         path_points = np.array([[x, y, 0.1] for x, y in path_xy])  # Set Z to 0.1m
+        :param path_plan_data: The path plan data to log.
+        """
+        if path_plan_data:
+            # Parse the path plan message
+            path_pose_list = path_plan_data.path_pose_list  # These are already in world coordinates
 
-    #         # Log the path plan in the world frame (not robot frame)
-    #         if len(path_points) > 1:
-    #             rr.log(
-    #                 "world/path_plan",  # Changed from "robot/path_plan" to "world/path_plan"
-    #                 rr.LineStrips3D(
-    #                     [path_points],
-    #                     colors=[[0.0, 1.0, 0.0, 1.0]],  # Green path
-    #                     radii=[0.02]
-    #                 ),
-    #                 timeless=False,
-    #             )
-    #             print(f"Visualized path with {len(path_points)} points")
+            # Convert path to numpy array for visualization
+            path_points = np.array([[x, y, 0.06] for x, y in path_pose_list])  # Set Z to 0.1m
+
+            # Log the path plan in the world frame
+            if len(path_points) > 1:
+                rr.log(
+                    "world/path_plan",
+                    rr.LineStrips3D(
+                        [path_points],
+                        colors=[[0.5, 0.0, 0.5, 1.0]],  # Purple path
+                        radii=[0.01]
+                    ),
+                    timeless=False,
+                )
 
     def transform_robot_to_world(self, points, robot_pose):
         """

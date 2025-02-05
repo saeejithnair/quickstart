@@ -1,4 +1,4 @@
-"""Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml at 2025-02-01 21:01:24.906337."""
+"""Auto-generated topic to message type mapping from TOML configuration config/bot_quickstart_msgs.toml."""
 
 from lib.messages.extended_pose_w_bias_msg import EXTENDED_POSE_W_BIAS_MSG
 from lib.messages.gyro_data_msg import GYRO_DATA_MSG

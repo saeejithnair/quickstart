@@ -14,7 +14,7 @@ class LookaheadController:
 
     def __init__(self, lookahead_distance, max_linear_velocity, max_angular_velocity,
                  pid_type:PID_type = PID_type.PID,
-                 pid_linear_kp=0.4, pid_linear_kv=0.0, pid_linear_ki=0.0,
+                 pid_linear_kp=0.7, pid_linear_kv=0.0, pid_linear_ki=0.0,
                  pid_angular_kp=2, pid_angular_kv=0.0, pid_angular_ki=0.0):
         """
         Initialize the LookaheadController with given parameters.

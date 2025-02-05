@@ -51,7 +51,7 @@ def main(toml_path):
         class_file = os.path.join(output_dir, f"{class_name.lower()}.py")
 
         with open(class_file, 'w') as f:
-            file_header_msg = f"Auto-generated MQTT message class from TOML configuration {toml_path} at {datetime.now()}."
+            file_header_msg = f"Auto-generated MQTT message class from TOML configuration {toml_path}."
             f.write('"""' + file_header_msg + '"""' + '\n\n')
 
             f.write("import json\n\n")
@@ -139,7 +139,7 @@ def main(toml_path):
                 topic_to_message_map[fields[field]] = message_class
 
     with open(paths.REPO_PATH / 'lib' / 'messages' / 'topic_to_message_type.py', 'w') as f:
-        file_header_msg = f"Auto-generated topic to message type mapping from TOML configuration {toml_path} at {datetime.now()}."
+        file_header_msg = f"Auto-generated topic to message type mapping from TOML configuration {toml_path}."
         f.write('"""' + file_header_msg + '"""' + '\n\n')
 
         # Track imported message classes
