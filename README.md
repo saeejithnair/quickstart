@@ -23,11 +23,11 @@ In your vscode or cursor editor: Install the vscode remote ssh connect extension
     ./scripts/motor_controller_setup.sh
     ```
 6. Open the repo on the Pi in the vscode ssh session
-7. Run the following to build the project, the config is the robot config you want to use from the [configs](configs) directory and message config you want to use from the [messages](messages) directory
+7. Run the following to build the project, the config is the robot config you want to use from the [configs](configs) directory and message config you want to use from the [configs](configs) directory
     ```bash
     CONFIG=bot_quickstart CONFIG_MSGS=bot_quickstart_msgs make build
     ```
-8. Then you can just launch nodes in this devcontainer with the following command
+8. Then you can just launch nodes with the following command
     ```bash
     python3 nodes/start_all_nodes.py
     ```
