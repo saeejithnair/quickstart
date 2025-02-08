@@ -144,24 +144,28 @@ sudo "$ODRIVE_TOOL_PATH" udev-setup
 echo "Configuring boot settings..."
 # sudo sed -i '7i dtparam=i2c_vc=on' /boot/firmware/config.txt
 # only add the overlay if it's not already in the file
-if ! grep -q "disable_poe_fan=1" /boot/firmware/config.txt; then
-    sudo echo "disable_poe_fan=1" | sudo tee -a /boot/firmware/config.txt
-fi
-if ! grep -q "enable_uart=1" /boot/firmware/config.txt; then
-    sudo echo "enable_uart=1" | sudo tee -a /boot/firmware/config.txt
-fi
-if ! grep -q "dtoverlay=uart1" /boot/firmware/config.txt; then
-    sudo echo "dtoverlay=uart1" | sudo tee -a /boot/firmware/config.txt
-fi
-if ! grep -q "dtoverlay=uart1-pi5" /boot/firmware/config.txt; then
-    sudo echo "dtoverlay=uart1-pi5" | sudo tee -a /boot/firmware/config.txt
-fi
-if ! grep -q "dtparam=i2c_arm=on" /boot/firmware/config.txt; then
-    sudo echo "dtparam=i2c_arm=on" | sudo tee -a /boot/firmware/config.txt
-fi
-if ! grep -q "dtoverlay=i2c1" /boot/firmware/config.txt; then
-    sudo echo "dtoverlay=i2c1" | sudo tee -a /boot/firmware/config.txt
-fi
+# if ! grep -q "disable_poe_fan=1" /boot/firmware/config.txt; then
+#     sudo echo "disable_poe_fan=1" | sudo tee -a /boot/firmware/config.txt
+# fi
+# if ! grep -q "enable_uart=1" /boot/firmware/config.txt; then
+#     sudo echo "enable_uart=1" | sudo tee -a /boot/firmware/config.txt
+# fi
+# if ! grep -q "dtoverlay=uart1" /boot/firmware/config.txt; then
+#     sudo echo "dtoverlay=uart1" | sudo tee -a /boot/firmware/config.txt
+# fi
+# if ! grep -q "dtoverlay=uart1-pi5" /boot/firmware/config.txt; then
+#     sudo echo "dtoverlay=uart1-pi5" | sudo tee -a /boot/firmware/config.txt
+# fi
+# if ! grep -q "dtparam=i2c_arm=on" /boot/firmware/config.txt; then
+#     sudo echo "dtparam=i2c_arm=on" | sudo tee -a /boot/firmware/config.txt
+# fi
+# if ! grep -q "dtoverlay=i2c1" /boot/firmware/config.txt; then
+#     sudo echo "dtoverlay=i2c1" | sudo tee -a /boot/firmware/config.txt
+# fi
+
+echo "Configuring boot settings..."                              # Setup boot config
+sudo sh -c 'printf "\ndisable_poe_fan=1\nenable_uart=1\ndtoverlay=uart1-pi5\ndtparam=i2c_arm=on\ndtoverlay=i2c1\ndtparam=spi=on\n" >> /boot/firmware/config.txt'
+
 
 echo "Configuring hardware PWM..."
 bash "$HOME/quickstart/scripts/setup_hardware_pwm.sh"
