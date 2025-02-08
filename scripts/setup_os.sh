@@ -130,11 +130,6 @@ echo "Building the config and messages..."
 cd "$HOME/quickstart"
 CONFIG=bot_quickstart CONFIG_MSGS=bot_quickstart_msgs make build
 
-# Patch the ODrive package baud rate
-echo "Patching the ODrive package baud rate..."
-SED_PATH=$(python -c "import fibre; import os; print(os.path.join(os.path.dirname(fibre.__file__), 'serial_transport.py'))")
-sed -i 's/DEFAULT_BAUDRATE = 115200/DEFAULT_BAUDRATE = 460800/' "$SED_PATH"
-
 # Run ODrive udev setup
 echo "Running ODrive udev setup..."
 ODRIVE_TOOL_PATH=$(which odrivetool)
