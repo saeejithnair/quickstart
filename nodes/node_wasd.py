@@ -1,47 +1,53 @@
-import time
-from sshkeyboard import listen_keyboard, stop_listening
+#!/usr/bin/env python3
 
-from lib.messages.mqtt_utils import MQTTPublisher
-from lib.messages.target_velocity_msg import TARGET_VELOCITY_MSG
-from lib.messages.topic_to_message_type import TOPIC_TARGET_VELOCITY
+# Adds the lib directory to the Python path
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+import paho.mqtt.client as mqtt
+from sshkeyboard import listen_keyboard, stop_listening
 
 # ------------------------------------------------------------------------------------
 # Constants & Setup
 # ------------------------------------------------------------------------------------
-mqtt_publisher = MQTTPublisher(broker_address="localhost", topic_to_message_map={TOPIC_TARGET_VELOCITY: TARGET_VELOCITY_MSG})
-mqtt_publisher.run()
+MQTT_BROKER_ADDRESS = "localhost"
+MQTT_TOPIC = "robot/drive"
+
+# Create MQTT client
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client.connect(MQTT_BROKER_ADDRESS)
+client.loop_start()
 
 def press(key):
     if key.lower() == 'w':  # Forward
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.25, 0.0))
+        client.publish(MQTT_TOPIC, "forward")
     elif key.lower() == 's':  # Backward
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), -0.25, 0.0))
+        client.publish(MQTT_TOPIC, "back") 
     elif key.lower() == 'a':  # Left turn
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.25))
+        client.publish(MQTT_TOPIC, "left")
     elif key.lower() == 'd':  # Right turn
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, -0.25))
+        client.publish(MQTT_TOPIC, "right")
     elif key.lower() == 'q':  # Quit
         stop_listening()
 
 def release(key):
-    print(f"Released key: {key}")
     # Stop motors when key is released
-    mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.0))
+    client.publish(MQTT_TOPIC, "stop")
 
 try:
     print("WASD to control, Q to quit")
     listen_keyboard(
         on_press=press,
         on_release=release,
-        # delay_second_char=0.1,
-        # delay_other_chars=0.01,
-        # sequential=True,
+
     )
 
 except Exception as e:
     print(f"Error: {e}")
 finally:
     # Clean up
-    mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.0))
-    mqtt_publisher.stop()
+    client.publish(MQTT_TOPIC, "stop")
+    client.loop_stop()
+    client.disconnect()
     print("Shutdown complete.")
