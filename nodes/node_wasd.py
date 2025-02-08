@@ -17,9 +17,9 @@ def press(key):
     elif key.lower() == 's':  # Backward
         mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), -0.25, 0.0))
     elif key.lower() == 'a':  # Left turn
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 0.25))
+        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, 10.0))
     elif key.lower() == 'd':  # Right turn
-        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, -0.25))
+        mqtt_publisher.publish_msg(TOPIC_TARGET_VELOCITY, TARGET_VELOCITY_MSG(time.time(), 0.0, -10.0))
     elif key.lower() == 'q':  # Quit
         stop_listening()
 
