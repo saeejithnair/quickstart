@@ -1,0 +1,42 @@
+[boot.i2c_firmware]
+file_path = "/boot/firmware/config.txt"
+search_pattern = "^dtparam=i2c_arm=(.+)"
+line_number = 56
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "on"
+
+[boot.spi_firmware]
+file_path = "/boot/firmware/config.txt"
+search_pattern = "^dtparam=spi=(.+)"
+line_number = 58
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "on"
+
+[boot.uart_enable]
+file_path = "/boot/firmware/config.txt"
+search_pattern = "^enable_uart=(.+)"
+line_number = 54
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "1"
+
+[boot.uart0_overlay]
+file_path = "/boot/firmware/config.txt"
+search_pattern = "^dtoverlay=uart0,(.+)"
+line_number = 0
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "not_found"
+
+[boot.uart1_overlay]
+file_path = "/boot/firmware/config.txt"
+search_pattern = "^dtoverlay=uart1,(.+)"
+line_number = 0
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "not_found"
+
+[audio.playback]
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "vc4hdmi0 [vc4-hdmi-0], device 0, vc4hdmi1 [vc4-hdmi-1], device 0"
+
+[audio.recording]
+last_checked = "February 21, 2025 at 01:19:22 AM"
+current_status = "CMTECK [CMTECK], device 0"

@@ -1,0 +1,4 @@
+# Configuration for default audio input device
+# This file is auto-generated when selecting a microphone device
+[default_audio_input]
+device_name = "CMTECK: USB Audio (hw:2,0)"
