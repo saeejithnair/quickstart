@@ -36,7 +36,7 @@ def select_microphone(p):
     for i in range(p.get_device_count()):
         dev_info = p.get_device_info_by_index(i)
         if dev_info['maxInputChannels'] > 0:  # Only show input devices
-            print(f"Device {i}: {dev_info['name']}")
+            print(f"Device {i}: {dev_info['name']} (Sample Rate: {int(dev_info['defaultSampleRate'])} Hz)")
             input_devices.append((i, dev_info['name']))
     
     # Let user select a device
@@ -61,12 +61,13 @@ def get_mic_config():
                 return {}
     return {}
 
-def save_mic_config(device_name):
+def save_mic_config(device_name, sample_rate):
     config_path = Path(__file__).parent.parent / "config" / "mic.toml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config = {
         "default_audio_input": {
-            "device_name": device_name
+            "device_name": device_name,
+            "sample_rate": int(sample_rate)  # Ensure sample rate is stored as integer
         }
     }
     with open(config_path, "wb") as f:
@@ -90,6 +91,7 @@ def test_microphone():
     # Get configuration or select new device
     config = get_mic_config()
     device_name = config.get("device_name")
+    saved_sample_rate = config.get("sample_rate")
     
     # Try to find device by name first
     device_index = None
@@ -103,15 +105,20 @@ def test_microphone():
         device_index = select_microphone(p)
         dev_info = p.get_device_info_by_index(device_index)
         device_name = dev_info['name']
-        save_mic_config(device_name)
+        sample_rate = int(dev_info['defaultSampleRate'])
+        save_mic_config(device_name, sample_rate)
+    else:
+        dev_info = p.get_device_info_by_index(device_index)
+        sample_rate = saved_sample_rate if saved_sample_rate else int(dev_info['defaultSampleRate'])
     
-    print(f"\nUsing input device: {p.get_device_info_by_index(device_index)['name']}")
+    print(f"\nUsing input device: {dev_info['name']}")
+    print(f"Sample rate: {sample_rate} Hz")
 
     # Adjust recording parameters
     CHUNK = 4096  # Increased from 1024 to reduce chance of overflow
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
-    RATE = 44100
+    RATE = sample_rate  # Use the device's sample rate
     RECORD_SECONDS = 5
     
     try:
