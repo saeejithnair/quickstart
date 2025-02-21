@@ -16,6 +16,7 @@ __pycache__/
 # Config and environment files
 motor_dir.json
 .env
+config_monitor.toml
 
 # Device tree overlay
 pwm-pi5.dtbo
