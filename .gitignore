@@ -6,17 +6,23 @@ __pycache__/
 
 # Generated files
 *.png
+*.jpg
+*.jpeg
 *.txt
 *.err
 *.log
 *.csv
 *.wav
 *.debug
+*.pt
+*.torchscript
 
 # Config and environment files
 motor_dir.json
 .env
 config_monitor.toml
+/config/
+/config/*
 
 # Device tree overlay
 pwm-pi5.dtbo
