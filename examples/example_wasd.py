@@ -5,9 +5,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from sshkeyboard import listen_keyboard, stop_listening
 from lib.odrive_uart import ODriveUART
+import json
 
 # Load motor directions
-import json
 with open(os.path.expanduser('~/quickstart/lib/motor_dir.json'), 'r') as f:
     motor_dirs = json.load(f)
 
@@ -62,6 +62,10 @@ try:
     listen_keyboard(
         on_press=press,
         on_release=release,
+        delay_second_char=0.05,  # Reduced from 0.75s to 0.05s
+        delay_other_chars=0.02,  # Reduced from 0.05s to 0.02s
+        sequential=False,  # Allow concurrent key handling
+        sleep=0.01  # Faster polling rate
     )
 
 except Exception as e:
