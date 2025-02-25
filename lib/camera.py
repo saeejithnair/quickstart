@@ -15,12 +15,15 @@ class StereoCamera:
         success_height = self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         # Set frame rate to 30 FPS
         success_fps = self.cap.set(cv2.CAP_PROP_FPS, 30)
+        # Set buffer size to 1
+        success_buffer = self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         # Check if settings were successful
         print(f"Set FOURCC to MJPG: {success_fourcc}")
         print(f"Set width to 2560: {success_width}")
         print(f"Set height to 720: {success_height}")
         print(f"Set FPS to 30: {success_fps}")
+        print(f"Set buffer size to 1: {success_buffer}")
 
         # Verify actual settings
         fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
@@ -28,9 +31,11 @@ class StereoCamera:
         width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
+        buffer_size = self.cap.get(cv2.CAP_PROP_BUFFERSIZE)
         print(f"Actual FOURCC: {fourcc_str}")
         print(f"Actual Resolution: {width}x{height}")
         print(f"Actual FPS: {fps}")
+        print(f"Actual buffer size: {buffer_size}")
         
         if scale != 1.0:
             print(f"Images will be scaled by factor: {scale}")
