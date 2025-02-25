@@ -24,6 +24,7 @@ import scipy.signal as signal
 from io import BytesIO
 import struct
 import queue
+import random
 
 # Setup error handler for ALSA
 ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int,
@@ -343,23 +344,49 @@ HTML_TEMPLATE = """
             if (!isTalkingToRobot) {
                 try {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphoneStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            sampleRate: 48000  // Use high quality audio 
+                        } 
+                    });
                     const microphone = audioContext.createMediaStreamSource(microphoneStream);
                     const processor = audioContext.createScriptProcessor(4096, 1, 1);
                     
+                    // Add throttling to reduce data rate
+                    let lastSendTime = 0;
+                    const SEND_INTERVAL = 75; // Less frequent sends, larger chunks for better stability
+                    let accumulatedData = new Float32Array(0);
+                    
                     processor.onaudioprocess = function(e) {
-                        // Get audio data
+                        const now = Date.now();
+                        
+                        // Get audio data and accumulate it
                         const inputData = e.inputBuffer.getChannelData(0);
+                        const newData = new Float32Array(accumulatedData.length + inputData.length);
+                        newData.set(accumulatedData);
+                        newData.set(inputData, accumulatedData.length);
+                        accumulatedData = newData;
                         
-                        // Convert to 16-bit PCM
-                        const pcmData = new Int16Array(inputData.length);
-                        for (let i = 0; i < inputData.length; i++) {
-                            pcmData[i] = inputData[i] * 0x7FFF;
+                        // Only send audio data at the specified interval
+                        if (now - lastSendTime >= SEND_INTERVAL) {
+                            lastSendTime = now;
+                            
+                            // Convert the accumulated data to 16-bit PCM
+                            const pcmData = new Int16Array(accumulatedData.length);
+                            for (let i = 0; i < accumulatedData.length; i++) {
+                                pcmData[i] = accumulatedData[i] * 0x7FFF;
+                            }
+                            
+                            // Reset accumulated data after sending
+                            accumulatedData = new Float32Array(0);
+                            
+                            // Convert to base64 and send
+                            const base64data = arrayBufferToBase64(pcmData.buffer);
+                            socket.emit('speaker_audio', { audio_data: base64data });
                         }
-                        
-                        // Convert to base64 and send
-                        const base64data = arrayBufferToBase64(pcmData.buffer);
-                        socket.emit('speaker_audio', { audio_data: base64data });
                     };
                     
                     microphone.connect(processor);
@@ -404,6 +431,7 @@ HTML_TEMPLATE = """
         function playAudio(base64Data) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log(`Audio context created with sample rate: ${audioContext.sampleRate} Hz`);
             }
             
             try {
@@ -414,7 +442,7 @@ HTML_TEMPLATE = """
                 const source = audioContext.createBufferSource();
                 
                 // Process the audio data directly without decoding
-                const audioBuffer = audioContext.createBuffer(1, audioData.byteLength / 2, 44100);
+                const audioBuffer = audioContext.createBuffer(1, audioData.byteLength / 2, audioContext.sampleRate);
                 const channelData = audioBuffer.getChannelData(0);
                 
                 // Convert Int16Array to Float32 for the audio buffer
@@ -424,12 +452,15 @@ HTML_TEMPLATE = """
                     channelData[i] = int16Array[i] / 32768.0;
                 }
                 
-                // Connect the buffer to the source
-                source.buffer = audioBuffer;
-                source.connect(audioContext.destination);
-                source.start(0);
+                // Add a gain node for volume control
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 2.0; // Boost volume
                 
-                console.log("Playing audio packet");
+                // Connect the buffer to the source and gain node
+                source.buffer = audioBuffer;
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                source.start(0);
             } catch (err) {
                 console.error('Error playing audio data:', err);
             }
@@ -532,7 +563,7 @@ from camera import StereoCamera
 from odrive_uart import ODriveUART
 
 # Add these global variables after other global variables
-audio_buffer = queue.Queue(maxsize=20)  # Buffer up to 20 audio chunks
+audio_buffer = queue.Queue(maxsize=30)  # Reduced buffer size from 50 to 30
 audio_playback_thread = None
 audio_playback_active = False
 
@@ -1103,14 +1134,29 @@ def handle_speaker_audio(data):
     
     if not audio_available:
         print("Audio output is not available")
-        return
+        return {'status': 'unavailable'}
     
     # Add audio data to buffer
     try:
         # Extract audio_data from the dictionary
         if isinstance(data, dict) and 'audio_data' in data:
-            # Add to buffer, don't block if buffer is full (discard)
-            audio_buffer.put_nowait(data['audio_data'])
+            # Check if buffer is getting too full
+            buffer_size = audio_buffer.qsize()
+            buffer_capacity = audio_buffer.maxsize
+            buffer_fullness = buffer_size / buffer_capacity * 100
+            
+            # Only clear if extremely full (95%) to avoid interruptions
+            if buffer_fullness > 95:
+                # Skip this chunk but don't clear the whole buffer
+                print(f"Buffer is {buffer_fullness:.1f}% full - skipping chunk to catch up")
+                # Don't clear the whole buffer, just skip this chunk
+            else:
+                # Add to buffer, don't block if buffer is full
+                try:
+                    audio_buffer.put_nowait(data['audio_data'])
+                except queue.Full:
+                    # Skip silently if full
+                    pass
             
             # Start the playback thread if it's not running
             if audio_playback_thread is None or not audio_playback_thread.is_alive():
@@ -1121,125 +1167,121 @@ def handle_speaker_audio(data):
                 print("Audio playback thread started")
         else:
             print(f"Invalid data format received: {type(data)}")
-    except queue.Full:
-        # Skip this chunk if buffer is full
-        print("Audio buffer full, skipping chunk")
+    except Exception as e:
+        print(f"Error handling speaker audio: {e}")
         
-    return {'status': 'audio_queued'}
+    return {'status': 'ok'}
 
 # Create a global lock for audio device access
 audio_device_lock = threading.Lock()
 
 def continuous_audio_playback():
     """Continuous audio playback thread that processes buffered audio data"""
-    global audio_buffer, audio_playback_active, audio_device_lock
+    global audio_buffer, audio_playback_active
+    
+    print("Starting audio playback thread")
     
     try:
-        import sounddevice as sd
-        import numpy as np
+        # Initialize PyAudio
+        with noalsaerr():
+            p = pyaudio.PyAudio()
         
         # Find the USB audio device
-        device_name = "UACDemoV1.0"  # Name of the USB audio device
-        devices = sd.query_devices()
-        device_id = None
+        device_index = None
+        for i in range(p.get_device_count()):
+            dev_info = p.get_device_info_by_index(i)
+            if dev_info['maxOutputChannels'] > 0:
+                device_name = dev_info['name']
+                print(f"Found output device: {device_name} (index {i})")
+                if "UACDemoV1.0" in device_name:
+                    device_index = i
+                    print(f"Selected USB audio device: {device_name}")
+                    break
         
-        # Look for the target device
-        for i, device in enumerate(devices):
-            if device_name in device['name'] and device['max_output_channels'] > 0:
-                device_id = i
-                print(f"Audio playback using device: {device['name']} (ID: {i})")
-                break
+        # If no USB device found, use default
+        if device_index is None:
+            device_index = p.get_default_output_device_info()['index']
+            print(f"Using default output device (index {device_index})")
         
-        # If target device not found, try to use default output
-        if device_id is None:
+        # Get device info to find supported sample rate
+        dev_info = p.get_device_info_by_index(device_index)
+        sample_rate = int(dev_info['defaultSampleRate'])
+        print(f"Using device's default sample rate: {sample_rate} Hz")
+        
+        # Create audio stream with device's supported parameters
+        stream = p.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=sample_rate,
+            output=True,
+            output_device_index=device_index,
+            frames_per_buffer=4096  # Larger buffer for more stable playback
+        )
+        
+        print("Audio playback stream created and started")
+        
+        # Volume factor for amplification - reduced to avoid distortion
+        volume_factor = 2.0
+        
+        # Main playback loop
+        buffered_data = bytearray()  # Use a byte buffer to aggregate small chunks
+        while audio_playback_active:
             try:
-                default_device = sd.query_devices(kind='output')
-                device_id = default_device['index']
-                print(f"Target device not found, using default: {default_device['name']} (ID: {device_id})")
-            except Exception as e:
-                print(f"Error getting default device: {e}")
-                return
-        
-        # Get device info
-        device_info = sd.query_devices(device_id)
-        device_sample_rate = int(device_info['default_samplerate'])
-        channels = min(2, device_info['max_output_channels'])
-        
-        # Set up the audio stream
-        with sd.OutputStream(samplerate=device_sample_rate, 
-                            device=device_id,
-                            channels=channels,
-                            blocksize=2048) as stream:
-            
-            print(f"Audio stream started: {device_sample_rate} Hz, {channels} channels")
-            
-            # Buffer to accumulate samples for smoother playback
-            stream_buffer = np.zeros((8192, channels), dtype=np.float32) if channels > 1 else np.zeros(8192, dtype=np.float32)
-            buffer_pos = 0
-            
-            # Acquire the lock once for the entire continuous playback
-            if audio_device_lock.acquire(timeout=1.0):
+                # Get data from buffer with a short timeout
                 try:
-                    while audio_playback_active:
-                        try:
-                            # Get audio data from buffer with small timeout
-                            base64_data = audio_buffer.get(timeout=0.1)
-                            
-                            # Decode and process audio
-                            audio_data = base64.b64decode(base64_data)
-                            samples = np.frombuffer(audio_data, dtype=np.int16)
-                            
-                            # Convert to float32 normalized between -1 and 1
-                            samples_float = samples.astype(np.float32) / 32767.0
-                            
-                            # Amplify the sound with clipping protection
-                            volume_factor = 20.0  # Increased from 10 to 20
-                            samples_float = np.clip(samples_float * volume_factor, -1.0, 1.0)
-                            
-                            # Resample if needed
-                            input_sample_rate = 44100
-                            if abs(input_sample_rate - device_sample_rate) > 100:
-                                import scipy.signal
-                                number_of_samples = int(round(len(samples_float) * float(device_sample_rate) / input_sample_rate))
-                                samples_float = scipy.signal.resample(samples_float, number_of_samples)
-                            
-                            # Convert mono to stereo if needed
-                            if channels == 2 and len(samples_float.shape) == 1:
-                                samples_float = np.column_stack((samples_float, samples_float))
-                            
-                            # Write to stream in chunks to avoid buffer underruns
-                            stream.write(samples_float)
-                            
-                        except queue.Empty:
-                            # No data in queue, add a short silence to prevent buffer underruns
-                            silence = np.zeros((1024, channels), dtype=np.float32) if channels > 1 else np.zeros(1024, dtype=np.float32)
-                            stream.write(silence)
-                            
-                            # If buffer has been empty for a while, consider exiting
-                            if audio_buffer.empty():
-                                # Add some trailing silence for smooth ending
-                                stream.write(silence)  # Add more silence
-                                time.sleep(0.2)  # Short delay
-                                if audio_buffer.empty():  # Double-check it's still empty
-                                    break
+                    audio_base64 = audio_buffer.get(timeout=0.05)
+                    
+                    # Decode base64 data
+                    audio_data = base64.b64decode(audio_base64)
+                    
+                    # Convert to numpy array for volume adjustment
+                    audio_array = np.frombuffer(audio_data, dtype=np.int16)
+                    
+                    # Apply volume adjustment (with clipping protection)
+                    audio_array = np.clip(audio_array.astype(np.float32) * volume_factor, -32768, 32767).astype(np.int16)
+                    
+                    # Convert back to bytes
+                    audio_data = audio_array.tobytes()
+                    
+                    # Add to our buffer
+                    buffered_data.extend(audio_data)
+                    
+                    # If we have enough data, write it to the stream
+                    if len(buffered_data) >= 4096:
+                        data_to_play = buffered_data[:4096]  # Take the first 4096 bytes
+                        stream.write(bytes(data_to_play))
+                        buffered_data = buffered_data[4096:]  # Keep the rest for next time
+                    
+                except queue.Empty:
+                    # If queue is empty but we still have data in our buffer, play it
+                    if len(buffered_data) > 0:
+                        # Pad with silence if needed
+                        if len(buffered_data) < 4096:
+                            padding = bytearray(4096 - len(buffered_data))
+                            buffered_data.extend(padding)
                         
-                        except Exception as e:
-                            print(f"Error in audio playback: {e}")
-                            time.sleep(0.1)  # Short delay on error
-                finally:
-                    # Release the lock when playback is complete
-                    audio_device_lock.release()
-            else:
-                print("Could not acquire audio device lock for continuous playback")
+                        # Play what we have
+                        stream.write(bytes(buffered_data[:4096]))
+                        buffered_data = buffered_data[4096:]
+                    else:
+                        # No data at all, small sleep
+                        time.sleep(0.01)
                 
+            except Exception as e:
+                print(f"Error in audio playback: {e}")
+                time.sleep(0.1)
+        
+        # Clean up
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        print("Audio playback thread stopped")
+        
     except Exception as e:
-        print(f"Error in continuous audio playback thread: {e}")
+        print(f"Error setting up audio playback: {e}")
         import traceback
         traceback.print_exc()
-    finally:
-        # Clean up
         audio_playback_active = False
-        print("Audio playback thread stopped")
 
 if __name__ == '__main__':
     try:
@@ -1260,10 +1302,10 @@ if __name__ == '__main__':
             print(f"Camera available: {camera_available}")
             print(f"Audio available: {audio_available}")
             # Start the Flask app
-            print(f"Open http://[ROBOT_IP]:5000 in your web browser")
+            print(f"Open http://[ROBOT_IP]:8080 in your web browser")
             
             # Run without debug mode to prevent camera issues on reload
-            socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+            socketio.run(app, host='0.0.0.0', port=8080, debug=False)
         else:
             print("Failed to initialize hardware")
     except KeyboardInterrupt:
