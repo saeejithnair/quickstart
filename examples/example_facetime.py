@@ -563,7 +563,12 @@ from camera import StereoCamera
 from odrive_uart import ODriveUART
 
 # Add these global variables after other global variables
-audio_buffer = queue.Queue(maxsize=30)  # Reduced buffer size from 50 to 30
+audio_buffer = queue.Queue(maxsize=50)  # Increased buffer size for more stability
+audio_buffer_monitor = {
+    "total_chunks": 0,
+    "dropped_chunks": 0,
+    "last_report_time": time.time()
+}
 audio_playback_thread = None
 audio_playback_active = False
 
@@ -1130,7 +1135,7 @@ def handle_stop_audio():
 @socketio.on('speaker_audio')
 def handle_speaker_audio(data):
     """Handle audio data to be played through robot's speaker"""
-    global audio_available, audio_buffer, audio_playback_thread, audio_playback_active
+    global audio_available, audio_buffer, audio_playback_thread, audio_playback_active, audio_buffer_monitor
     
     if not audio_available:
         print("Audio output is not available")
@@ -1140,23 +1145,47 @@ def handle_speaker_audio(data):
     try:
         # Extract audio_data from the dictionary
         if isinstance(data, dict) and 'audio_data' in data:
-            # Check if buffer is getting too full
+            audio_buffer_monitor["total_chunks"] += 1
+            
+            # Check buffer fullness
             buffer_size = audio_buffer.qsize()
             buffer_capacity = audio_buffer.maxsize
             buffer_fullness = buffer_size / buffer_capacity * 100
             
-            # Only clear if extremely full (95%) to avoid interruptions
-            if buffer_fullness > 95:
-                # Skip this chunk but don't clear the whole buffer
-                print(f"Buffer is {buffer_fullness:.1f}% full - skipping chunk to catch up")
-                # Don't clear the whole buffer, just skip this chunk
+            # Simple buffer management: if buffer gets too full, clear it completely
+            if buffer_fullness > 90:
+                # Buffer is very full - completely clear it to avoid lag
+                print(f"Buffer is {buffer_fullness:.1f}% full - clearing buffer to maintain real-time audio")
+                while not audio_buffer.empty():
+                    try:
+                        audio_buffer.get_nowait()
+                        audio_buffer_monitor["dropped_chunks"] += 1
+                    except queue.Empty:
+                        break
+                # Now add the current chunk which is the most recent audio data
+                audio_buffer.put_nowait(data['audio_data'])
             else:
-                # Add to buffer, don't block if buffer is full
+                # Buffer is at acceptable level, add normally
                 try:
                     audio_buffer.put_nowait(data['audio_data'])
                 except queue.Full:
-                    # Skip silently if full
-                    pass
+                    audio_buffer_monitor["dropped_chunks"] += 1
+            
+            # Print buffer statistics periodically (every 5 seconds)
+            current_time = time.time()
+            if current_time - audio_buffer_monitor["last_report_time"] > 5:
+                drop_rate = 0
+                if audio_buffer_monitor["total_chunks"] > 0:
+                    drop_rate = (audio_buffer_monitor["dropped_chunks"] / audio_buffer_monitor["total_chunks"]) * 100
+                    
+                print(f"Audio buffer stats: {buffer_size}/{buffer_capacity} ({buffer_fullness:.1f}% full), "
+                      f"Dropped: {audio_buffer_monitor['dropped_chunks']}/{audio_buffer_monitor['total_chunks']} "
+                      f"({drop_rate:.1f}%)")
+                
+                # Reset counters but keep track of time
+                audio_buffer_monitor["total_chunks"] = 0
+                audio_buffer_monitor["dropped_chunks"] = 0
+                audio_buffer_monitor["last_report_time"] = current_time
             
             # Start the playback thread if it's not running
             if audio_playback_thread is None or not audio_playback_thread.is_alive():
@@ -1209,27 +1238,36 @@ def continuous_audio_playback():
         print(f"Using device's default sample rate: {sample_rate} Hz")
         
         # Create audio stream with device's supported parameters
+        chunk_size = 8192  # Larger buffer for more stable playback (increased from 4096)
         stream = p.open(
             format=pyaudio.paInt16,
             channels=1,
             rate=sample_rate,
             output=True,
             output_device_index=device_index,
-            frames_per_buffer=4096  # Larger buffer for more stable playback
+            frames_per_buffer=chunk_size
         )
         
         print("Audio playback stream created and started")
         
         # Volume factor for amplification - reduced to avoid distortion
-        volume_factor = 2.0
+        volume_factor = 1.5  # Reduced from 2.0 to minimize distortion
         
         # Main playback loop
         buffered_data = bytearray()  # Use a byte buffer to aggregate small chunks
+        last_active_time = time.time()
+        
         while audio_playback_active:
             try:
+                # Check if we've been idle too long (no data for 10 seconds)
+                if time.time() - last_active_time > 10 and audio_buffer.empty():
+                    print("Audio playback idle for 10 seconds, exiting thread")
+                    break
+                
                 # Get data from buffer with a short timeout
                 try:
                     audio_base64 = audio_buffer.get(timeout=0.05)
+                    last_active_time = time.time()  # Reset idle timer
                     
                     # Decode base64 data
                     audio_data = base64.b64decode(audio_base64)
@@ -1246,23 +1284,31 @@ def continuous_audio_playback():
                     # Add to our buffer
                     buffered_data.extend(audio_data)
                     
+                    # If buffer is getting too large, we might be falling behind
+                    # Implement a catching up mechanism
+                    if len(buffered_data) > chunk_size * 4:
+                        # We're falling behind, skip some data to catch up
+                        # Keep only the most recent 3 chunks worth of data
+                        buffered_data = buffered_data[-(chunk_size * 3):]
+                        print("Audio playback falling behind - skipping data to catch up")
+                    
                     # If we have enough data, write it to the stream
-                    if len(buffered_data) >= 4096:
-                        data_to_play = buffered_data[:4096]  # Take the first 4096 bytes
+                    while len(buffered_data) >= chunk_size:
+                        data_to_play = buffered_data[:chunk_size]
                         stream.write(bytes(data_to_play))
-                        buffered_data = buffered_data[4096:]  # Keep the rest for next time
+                        buffered_data = buffered_data[chunk_size:]
                     
                 except queue.Empty:
                     # If queue is empty but we still have data in our buffer, play it
                     if len(buffered_data) > 0:
                         # Pad with silence if needed
-                        if len(buffered_data) < 4096:
-                            padding = bytearray(4096 - len(buffered_data))
+                        if len(buffered_data) < chunk_size:
+                            padding = bytearray(chunk_size - len(buffered_data))
                             buffered_data.extend(padding)
                         
                         # Play what we have
-                        stream.write(bytes(buffered_data[:4096]))
-                        buffered_data = buffered_data[4096:]
+                        stream.write(bytes(buffered_data[:chunk_size]))
+                        buffered_data = buffered_data[chunk_size:]
                     else:
                         # No data at all, small sleep
                         time.sleep(0.01)
