@@ -19,6 +19,9 @@ os.environ['DISABLE_ULTRALYTICS_VERSIONING_CHECK'] = 'True'
 
 TURN_SPEED = 0.25
 CENTER_THRESHOLD = 0.05
+FORWARD_SPEED = 0.2  # Speed for moving forward/backward
+TARGET_WIDTH_RATIO = 0.4  # Target width of person relative to image width
+WIDTH_THRESHOLD = 0.05  # Acceptable range around target width
 
 class PersonFollower:
     def __init__(self):
@@ -108,24 +111,37 @@ class PersonFollower:
             self.save_debug_images(left, annotated)
             return
         
-        # Get center point of the person
+        # Get center point and width of the person
         center_x = (best_person[0] + best_person[2]) / 2
         image_center_x = left.shape[1] / 2
         x_error = (center_x - image_center_x) / image_center_x  # -1 to 1
         
+        # Calculate width ratio of person relative to image
+        person_width = best_person[2] - best_person[0]
+        image_width = left.shape[1]
+        width_ratio = person_width / image_width
+        width_error = width_ratio - TARGET_WIDTH_RATIO
+        
+        # Determine forward/backward speed based on width
+        forward_speed = 0
+        if abs(width_error) > WIDTH_THRESHOLD:
+            # If person is too far (small), move forward
+            # If person is too close (large), move backward
+            forward_speed = -FORWARD_SPEED * (width_error / abs(width_error))
+        
         # Bang-bang control: fixed speed turn based on which side person is on
         if abs(x_error) < CENTER_THRESHOLD:
-            # Person is centered - stop
-            self.current_left_speed = 0
-            self.current_right_speed = 0
+            # Person is centered - maintain forward/backward motion only
+            self.current_left_speed = forward_speed
+            self.current_right_speed = forward_speed
         elif x_error > 0:
             # Person is to the right - turn right
-            self.current_left_speed = TURN_SPEED*abs(x_error)
-            self.current_right_speed = -TURN_SPEED*abs(x_error)
+            self.current_left_speed = TURN_SPEED*abs(x_error) + forward_speed
+            self.current_right_speed = -TURN_SPEED*abs(x_error) + forward_speed
         else:
             # Person is to the left - turn left
-            self.current_left_speed = -TURN_SPEED*abs(x_error)
-            self.current_right_speed = TURN_SPEED*abs(x_error)
+            self.current_left_speed = -TURN_SPEED*abs(x_error) + forward_speed
+            self.current_right_speed = TURN_SPEED*abs(x_error) + forward_speed
         
         # Send commands to motors
         self.motor.set_speed_mps_left(self.current_left_speed)
