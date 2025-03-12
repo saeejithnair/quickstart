@@ -123,6 +123,27 @@ class ODriveUART:
         self.send_command(f'w axis{axis}.controller.config.input_mode 1')
         print(f"Axis {axis} set to velocity control mode")
 
+    def enable_velocity_ramp_mode_left(self):
+        self.enable_velocity_ramp_mode(self.left_axis)
+
+    def enable_velocity_ramp_mode_right(self):
+        self.enable_velocity_ramp_mode(self.right_axis)
+
+    def enable_velocity_ramp_mode(self, axis):
+        self.send_command(f'w axis{axis}.controller.config.control_mode 2')
+        self.send_command(f'w axis{axis}.controller.config.input_mode 2')
+        print(f"Axis {axis} set to ramped velocity control mode")
+
+    def set_velocity_ramp_rate_left(self, ramp_rate):
+        self.set_velocity_ramp_rate(self.left_axis, ramp_rate)
+
+    def set_velocity_ramp_rate_right(self, ramp_rate):
+        self.set_velocity_ramp_rate(self.right_axis, ramp_rate)
+
+    def set_velocity_ramp_rate(self, axis, ramp_rate):
+        self.send_command(f'w axis{axis}.controller.config.vel_ramp_rate {ramp_rate:.4f}')
+        print(f"Axis {axis} velocity ramp rate set to {ramp_rate:.4f} turns/s^2")
+
     def start_left(self):
         self.start(self.left_axis)
 
