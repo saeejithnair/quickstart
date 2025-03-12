@@ -20,7 +20,7 @@ def wait_for_idle(axis):
 def connect_odrive():
     print("Connecting to ODrive...")
     import odrive
-    odrv = odrive.find_any(path='serial:/dev/ttyAMA1', timeout=5)
+    odrv = odrive.find_any(path='serial:/dev/ttyAMA1', timeout=15)
     if odrv is None:
         raise Exception('ODrive timed out')
     return odrv
