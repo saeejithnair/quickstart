@@ -8,13 +8,14 @@ from lib.camera import StereoCamera
 import time
 
 def main():
-    camera = StereoCamera(scale=1)
+    # Scale down the images to 1/4 of their original size to reduce bandwidth
+    camera = StereoCamera(scale=0.25)
     
     # Initialize Rerun with a descriptive name
     rr.init("stereo_camera_stream", default_enabled=True)
     
     # Replace with your Computer's IP address if needed
-    rr.connect_tcp("192.168.2.24:9876")
+    rr.connect_tcp("10.42.0.176:9090")
     
     print("\nStreaming stereo images to Rerun viewer...")
     print(f"Scale factor: {camera.get_scale()}")
