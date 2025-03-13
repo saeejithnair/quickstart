@@ -1,12 +1,22 @@
 # Adds the lib directory to the Python path
 import sys
 import os
+
+# Add the parent directory to the Python path to access the lib folder
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# Import the package utility and ensure required packages are installed
+from lib.package_utils import ensure_package
+
+# Check and install required packages
+ensure_package("cv2", "opencv-python")
+ensure_package("ultralytics")
+ensure_package("numpy")
 
 # https://docs.ultralytics.com/guides/raspberry-pi/
 import cv2
 from ultralytics import YOLO
-from examples.wrapper_camera import StereoCamera
+from lib.camera import StereoCamera
 
 camera = StereoCamera()
 
@@ -15,7 +25,8 @@ model.export(format="ncnn")
 
 ncnn_model = YOLO("yolo11n_ncnn_model")
 
-left_image = camera.get_left()
+# Get stereo images and use the left image
+left_image, _ = camera.get_stereo()
 
 if left_image is not None:
     results = ncnn_model(left_image)
