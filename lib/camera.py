@@ -4,30 +4,17 @@ import os
 # Import the package utility
 from lib.package_utils import ensure_package
 
-# Ensure required packages for base functionality
+# Ensure required packages are installed
+# ensure_package("pyrealsense2")
 ensure_package("cv2", "opencv-python")
 ensure_package("numpy")
 
+# import pyrealsense2 as rs
 import cv2
 import numpy as np
 
-# Import pyrealsense2 conditionally
-try:
-    import pyrealsense2 as rs
-    REALSENSE_AVAILABLE = True
-except ImportError:
-    REALSENSE_AVAILABLE = False
-
 class RealsenseCamera:
     def __init__(self):
-        # Check if pyrealsense2 is available
-        if not REALSENSE_AVAILABLE:
-            ensure_package("pyrealsense2")
-            try:
-                import pyrealsense2 as rs
-            except ImportError:
-                raise ImportError("Failed to import pyrealsense2. RealsenseCamera cannot be used.")
-        
         # Configure depth and color streams
         self.pipeline = rs.pipeline()
         self.config = rs.config()
