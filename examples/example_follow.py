@@ -3,6 +3,14 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+# Import the package utility and ensure required packages are installed
+from lib.package_utils import ensure_package
+
+# Check and install required packages
+ensure_package("cv2", "opencv-python")
+ensure_package("numpy")
+ensure_package("ultralytics")
+
 import cv2
 import numpy as np
 import json
@@ -17,9 +25,9 @@ os.environ['YOLO_VERBOSE'] = 'False'
 os.environ['ULTRALYTICS_QUIET'] = 'True'
 os.environ['DISABLE_ULTRALYTICS_VERSIONING_CHECK'] = 'True'
 
-TURN_SPEED = 0.25
+TURN_SPEED = 0.3
 CENTER_THRESHOLD = 0.05
-FORWARD_SPEED = 0.2  # Speed for moving forward/backward
+FORWARD_SPEED = 0.25  # Speed for moving forward/backward
 TARGET_WIDTH_RATIO = 0.4  # Target width of person relative to image width
 WIDTH_THRESHOLD = 0.05  # Acceptable range around target width
 
@@ -43,8 +51,8 @@ class PersonFollower:
         
         self.motor.start_left()
         self.motor.start_right()
-        self.motor.enable_velocity_mode_left()
-        self.motor.enable_velocity_mode_right()
+        self.motor.enable_velocity_ramp_mode_left()
+        self.motor.enable_velocity_ramp_mode_right()
         self.motor.disable_watchdog_left()
         self.motor.disable_watchdog_right()
         self.motor.clear_errors_left()
