@@ -25,6 +25,9 @@ from lib.camera import StereoCamera
 # Image scaling (smaller = faster but less detailed)
 SCALE = 0.5  # 1.0 = full resolution, 0.5 = half, etc.
 
+# Rectification strength (1.0 = full rectification, 0.0 = no rectification)
+RECTIFICATION_STRENGTH = 0.2  # Reduce this value to make rectification less aggressive
+
 # Camera parameters
 FOCAL_LENGTH_MM = 2.53  # mm (from datasheet)
 PIXEL_SIZE_UM = 3.0     # μm (from datasheet)
@@ -63,6 +66,7 @@ if SAVE_DEBUG_IMAGES:
 
 print(f"Starting stereo depth processing with:")
 print(f"- Scale: {SCALE}")
+print(f"- Rectification strength: {RECTIFICATION_STRENGTH}")
 print(f"- Disparity range: {MIN_DISPARITY} to {MIN_DISPARITY + NUM_DISPARITIES}")
 print(f"- Block size: {BLOCK_SIZE}")
 print(f"- WLS filter: {'Enabled' if ENABLE_WLS_FILTER else 'Disabled'}")
@@ -233,8 +237,18 @@ def process_stereo_frame(left, right, frame_count=0):
     right_processed = preprocess_image(right)
     
     # Rectify images
-    left_rect = cv2.remap(left_processed, left_map1, left_map2, cv2.INTER_LINEAR)
-    right_rect = cv2.remap(right_processed, right_map1, right_map2, cv2.INTER_LINEAR)
+    left_rect_full = cv2.remap(left_processed, left_map1, left_map2, cv2.INTER_LINEAR)
+    right_rect_full = cv2.remap(right_processed, right_map1, right_map2, cv2.INTER_LINEAR)
+    
+    # Blend rectified images with original based on rectification strength
+    if RECTIFICATION_STRENGTH < 1.0:
+        left_rect = cv2.addWeighted(left_rect_full, RECTIFICATION_STRENGTH, 
+                                   left_processed, 1.0 - RECTIFICATION_STRENGTH, 0)
+        right_rect = cv2.addWeighted(right_rect_full, RECTIFICATION_STRENGTH, 
+                                    right_processed, 1.0 - RECTIFICATION_STRENGTH, 0)
+    else:
+        left_rect = left_rect_full
+        right_rect = right_rect_full
     
     # Calculate disparity
     raw_disp, filtered_disp = compute_disparity(left_rect, right_rect)
@@ -244,6 +258,11 @@ def process_stereo_frame(left, right, frame_count=0):
     
     # Save debug information periodically
     if SAVE_DEBUG_IMAGES and frame_count % 30 == 0:
+        # Save both full rectification and blended rectification for comparison
+        if RECTIFICATION_STRENGTH < 1.0:
+            # Save the original full rectification too for comparison
+            save_debug_images(left, right, left_rect_full, right_rect_full, 
+                             raw_disp, filtered_disp, f"{frame_count}_full_rect")
         save_debug_images(left, right, left_rect, right_rect, raw_disp, filtered_disp, f"{frame_count}")
     
     # Create colored visualization
