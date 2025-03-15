@@ -23,10 +23,10 @@ from lib.camera import StereoCamera
 #############################################
 
 # Image scaling (smaller = faster but less detailed)
-SCALE = 0.5  # 1.0 = full resolution, 0.5 = half, etc.
+SCALE = 0.375  # 1.0 = full resolution, 0.5 = half, etc.
 
 # Rectification strength (1.0 = full rectification, 0.0 = no rectification)
-RECTIFICATION_STRENGTH = 0.2  # Reduce this value to make rectification less aggressive
+RECTIFICATION_STRENGTH = 0.125  # Reduce this value to make rectification less aggressive
 
 # Camera parameters
 FOCAL_LENGTH_MM = 2.53  # mm (from datasheet)
