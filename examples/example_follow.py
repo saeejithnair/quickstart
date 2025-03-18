@@ -39,10 +39,10 @@ class PersonFollower:
         ncnn_path = "yolov8n_ncnn_model"
         
         if not os.path.exists(ncnn_path):
-            self.model = YOLO(model_path if os.path.exists(model_path) else 'yolov8n', verbose=False)
+            self.model = YOLO(model_path if os.path.exists(model_path) else 'yolov8n')
             self.model.export(format="ncnn")
         
-        self.model = YOLO(ncnn_path, verbose=False)
+        self.model = YOLO(ncnn_path)
         
         with open(os.path.expanduser('~/quickstart/lib/motor_dir.json'), 'r') as f:
             motor_dirs = json.load(f)
